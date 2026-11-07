@@ -26,14 +26,15 @@
     "*.{json,md,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "eslint": "^9.0.0",
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
     "husky": "^9.1.7",
+    "jiti": "^2.7.0",
     "lint-staged": "^17.6.0",
     "prettier": "^3.0.0",
     "turbo": "^2.0.0",
-    "typescript": "^5.8.0",
-    "typescript-eslint": "^8.0.0",
-    "vitest": "^3.0.0"
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   }
 }

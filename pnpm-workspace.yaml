@@ -3,3 +3,20 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: false
+
+# Default catalog: versions shared by more than one workspace package.
+# Root-only tools (husky, lint-staged, turbo, prettier) are pinned in package.json.
+catalog:
+  "@eslint/js": ^9.0.0
+  eslint: ^9.0.0
+  typescript-eslint: ^8.71.2
+  vitest: ^3.0.0
+  # Held on the 6.x line. TS 7 breaks `turbo lint`/`typecheck` because typescript-eslint
+  # declares a `typescript: >=4.8.4 <6.1.0` peer range ("does not support TS 7.0").
+  # Use the `typescript7` named catalog below to try 7 in a single package.
+  typescript: ^6.0.3
+
+# Named catalogs: opt in per package with `"typescript": "catalog:typescript7"`.
+catalogs:
+  typescript7:
+    typescript: ^7.0.2
