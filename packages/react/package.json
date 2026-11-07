@@ -1,0 +1,14 @@
+{
+  "name": "@universal-slots/react",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "React integration for UniversalSlots.",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  }
+}
