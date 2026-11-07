@@ -16,7 +16,7 @@ UniversalSlots aims to define a framework-neutral composition contract and provi
 
 ## Development
 
-Requirements: Node.js 22+ and pnpm.
+Requirements: Node.js >=22.13.0 and pnpm 12.
 
 ```sh
 pnpm install
@@ -27,3 +27,13 @@ pnpm typecheck
 ```
 
 See [ROADMAP.md](./ROADMAP.md) for the proposed project plan.
+
+## Workspace conventions
+
+- `lib/*` is reserved for private internal workspaces.
+- `packages/*` is reserved for public packages intended for publication.
+- `apps/*` is intentionally omitted until an actual application is needed.
+
+A public package must not depend on a private workspace package unless that internal
+code is bundled into the published package. See the repository roadmap for the
+current package-boundary strategy.
