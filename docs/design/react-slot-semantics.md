@@ -6,6 +6,11 @@ This document defines the behavior to settle before implementing the React adapt
 Radix Slot is a compatibility reference, not an automatic source of requirements.
 UniversalSlots should adopt behavior intentionally and document any differences.
 
+> **Relationship to the universal design:** This document describes a React-specific
+> profile for polymorphic composition. It is not the framework-neutral composition
+> contract. See [Polymorphic Composition Semantics](./polymorphic-composition.md).
+> The React profile is proposed and must be reconciled with that contract during US-005.
+
 ## Scope
 
 The initial adapter targets React-style slot substitution: a slot component receives
