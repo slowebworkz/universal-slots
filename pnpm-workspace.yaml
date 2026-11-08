@@ -8,7 +8,13 @@ allowBuilds:
 # Root-only tools (husky, lint-staged, turbo, prettier) are pinned in package.json.
 catalog:
   "@eslint/js": ^10.0.1
+  "@testing-library/react": ^16.3.0
+  "@types/react": ^19.0.0
+  "@types/react-dom": ^19.0.0
   eslint: ^10.14.0
+  jsdom: ^29.1.1
+  react: ^19.0.0
+  react-dom: ^19.0.0
   typescript-eslint: ^8.72.1
   vitest: ^4.1.12
   # Held on the 6.x line. TS 7 breaks `turbo lint`/`typecheck` because typescript-eslint
