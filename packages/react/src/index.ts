@@ -1,2 +1,2 @@
-// Public React adapter entry point; implementation to follow.
+// Public exports will be added when the React Slot implementation is ready (US-005).
 export {};

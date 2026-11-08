@@ -112,7 +112,9 @@ decision; it should not be assumed to match every existing slot library.
 ### Child validation
 
 - Require exactly one valid React element.
-- Throw a clear, stable error for zero children or multiple children.
+- Throw the stable error message:
+  `UniversalSlots Slot expects exactly one non-fragment React element child.`
+  for zero children, multiple children, or non-element children.
 - Reject non-element children such as strings and numbers.
 - Initially reject fragments as slot targets; fragments do not provide a
   reliable host instance for prop forwarding or ref composition.
@@ -120,22 +122,17 @@ decision; it should not be assumed to match every existing slot library.
 
 ## Supported React versions
 
-**Open decision; must be settled before implementation.** The package declares
-no React peer dependency yet. React 18 and 19 differ in ref behavior, so this
-affects runtime code and type declarations (for example, `ref` as a regular
-prop in 19 versus `element.ref` in 18).
+**Decision: React 19 only for v1.** The package peer range is `react: ^19.0.0`.
+React 18 support is deferred until there is a concrete compatibility need.
 
-Decide:
+React 19 callback refs may return cleanup functions. The composed callback ref
+must return a cleanup function that invokes each callback ref's returned cleanup;
+for callback refs that return no cleanup, invoke them with `null` during detach.
+Object refs are cleared by setting `.current` to `null`. Cleanup must be
+idempotent and must not mutate or replace the original ref objects.
 
-- Whether the first release targets React 18, React 19, or both.
-- Callback ref cleanup. React 19 lets a callback ref return a cleanup function
-  and skips the `null` call when it does; React 18 always calls the ref with
-  `null` on detach. The composed ref must either return a cleanup that runs
-  each ref's cleanup (or clears it with `null` when it returned none), or call
-  each ref with `null`.
-
-Recommendation: target React 19 only for the first release, declare the peer
-range accordingly, and add 18 support only on demand.
+This decision is reflected in the React adapter package's peer dependency and
+the R-04–R-06 conformance tests.
 
 ## Deferred behavior
 
