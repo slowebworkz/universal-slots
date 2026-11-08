@@ -151,19 +151,111 @@ That profile is not itself the framework-neutral contract. As the universal cont
 - Record framework-specific divergences rather than generalizing React behavior without evidence.
 - Treat the current React profile as proposed until reviewed against this model.
 
-## Design decisions to resolve
+## Initial composition contract (v1)
 
-The specification review must explicitly settle or mark as deferred:
+The following decisions are settled for the initial contract. They are deliberately
+simple and fixed; adapters must not introduce configurable precedence or handler
+policies that make the shared behavior unpredictable.
 
-1. Whether prop precedence is fixed or configurable.
-2. Which props are composed specially (events, class, style, refs) and which use ordinary precedence.
-3. Whether cancellation suppresses composed event handlers.
-4. How composition-only props are identified and filtered.
-5. What target categories are required for the first release.
-6. Whether nested composition is required in v1 and what ordering it uses.
-7. Which runtime capabilities are required versus optional per adapter.
-8. How much type-level composition is included in the first public release.
-9. Whether the public API is a low-level primitive, framework adapter API, or both.
+### API and target model
+
+- UniversalSlots provides a **low-level composition primitive** through each
+  framework adapter. Component libraries may build higher-level APIs such as
+  `asChild` on top of it; UniversalSlots does not prescribe those APIs.
+- The primitive receives composition props and one target, then applies the
+  contributions to that target while preserving its identity and rendering
+  responsibility.
+- Native/intrinsic elements and custom framework components are supported when
+  they can accept and forward the relevant props.
+- The primitive does not replace ordinary `children`, content projection, or
+  render props. It does not select a target from a `as`/`asChild` prop.
+- Unsupported target shapes must fail clearly or be rejected by the adapter.
+  Capability limitations must not silently discard composition props.
+
+### Ordinary props and special props
+
+- For ordinary props, **target props win** when the target explicitly specifies
+  the prop, including values such as `undefined`, `null`, and `false`.
+- Composition props are forwarded only when the target prop is absent.
+- Composition-only props are consumed by the adapter and must not leak to the
+  rendered host element.
+- The adapter owns framework-specific metadata and forwarding rules.
+
+### Event handlers
+
+- Recognized event handlers are composed rather than treated as ordinary props.
+- The target handler runs first; the composing handler runs second.
+- `preventDefault()` does not suppress the composing handler.
+- Only handlers recognized by the adapter's event convention are composed.
+  Arbitrary function-valued props are ordinary props and follow target-wins
+  precedence.
+- A target's explicit `undefined` handler blocks forwarding/composition of the
+  composing handler.
+
+### Class and style
+
+- Class values are concatenated in composition order: composing component first,
+  target last. Empty values are omitted; no class conflict resolution is done.
+- Style objects are shallow-merged in composition order, with the target taking
+  precedence for conflicting properties.
+- Input style objects must not be mutated.
+- Adapters may define their own supported class/style value shapes, but must
+  document deviations from this baseline.
+
+### References and lifecycle
+
+- Ref composition is supported where the framework exposes refs/references.
+- All composed refs receive the same underlying instance or reference.
+- Original caller-owned ref objects are not mutated or replaced.
+- Cleanup/detachment follows the framework's lifecycle semantics and must be
+  documented by the adapter.
+- An adapter that cannot provide compatible ref composition must report that
+  capability as unsupported rather than silently dropping refs.
+
+### Nested composition
+
+- Nested composition is supported in v1 when the adapter can preserve the
+  contract.
+- Contributions accumulate from the outermost composing component toward the
+  innermost target.
+- Ordinary props use target-wins precedence at each layer; therefore the
+  deepest target wins a conflict.
+- Event handlers run from the deepest target outward through composing layers.
+- Classes concatenate from outermost to innermost target.
+- Style properties are merged outermost to innermost, with the deepest target
+  winning conflicts.
+- Ref composition includes all layers and follows the adapter's lifecycle rules.
+
+### Type-level contract
+
+- Type-level composition is part of the intended product, not merely a consumer
+  responsibility.
+- Each framework adapter supplies type-level APIs appropriate to that
+  framework; a single framework-neutral TypeScript utility is not required.
+- The initial React adapter must preserve useful target props and inference,
+  expose composition props, and preserve/constrain target ref types.
+- Runtime validation remains necessary for cases that static types cannot
+  reliably reject.
+
+### Adapter capabilities
+
+The shared contract defines the intended behavior. Adapters may declare a
+capability unsupported only when the framework cannot provide it reliably;
+they must not silently claim full conformance. Capability declarations should
+identify the affected behavior and explain the limitation.
+
+## Deferred decisions
+
+The following remain intentionally deferred:
+
+- Configurable prop precedence or event-handler policies.
+- Arbitrary function-prop composition.
+- Class conflict resolution (including Tailwind-aware merging).
+- Fragment, multiple-target, and non-element target support.
+- Universal API syntax beyond the low-level adapter primitive.
+- Framework support beyond the initial React validation target and subsequent
+  evidence-based adapter research.
+- A shared TypeScript type utility across frameworks.
 
 ## Conformance strategy
 
@@ -183,7 +275,7 @@ The React US-004 test suite is a React profile test suite. It should be reconcil
 - Polymorphic composition is clearly distinguished from content projection and ordinary children.
 - Composing component, target, primitive, adapter, and target identity are defined.
 - Runtime and type-level requirements are documented separately.
-- Prop, event, class/style, ref/lifecycle, forwarding, and nested-composition questions are settled or explicitly deferred.
+- Prop, event, class/style, ref/lifecycle, forwarding, and nested-composition semantics are settled for v1; deferred capabilities are explicit.
 - Framework-neutral requirements are separated from React-specific behavior.
 - The React profile is related to, but not mistaken for, the universal contract.
 - No implementation or dependency changes are required by this milestone.

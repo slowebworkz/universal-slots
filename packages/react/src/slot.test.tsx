@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-// These contract tests are skipped until US-005 implements Slot; their assertions
+// These contract tests are skipped until US-006 implements Slot; their assertions
 // remain in place and are typechecked in the meantime.
 
 import { createRef, type MouseEvent, type ReactNode } from "react";

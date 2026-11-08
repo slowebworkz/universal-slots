@@ -9,7 +9,7 @@ UniversalSlots should adopt behavior intentionally and document any differences.
 > **Relationship to the universal design:** This document describes a React-specific
 > profile for polymorphic composition. It is not the framework-neutral composition
 > contract. See [Polymorphic Composition Semantics](./polymorphic-composition.md).
-> The React profile is proposed and must be reconciled with that contract during US-005.
+> The React profile implements the v1 decisions in the universal contract; adapter-specific details are recorded here.
 
 ## Scope
 
@@ -18,23 +18,22 @@ props and applies them to a single child element. This is distinct from native
 content projection (such as Web Component `<slot>`), which does not replace a
 child element or merge its props.
 
-This task is specification and test planning only. It does not implement the
-adapter or introduce dependencies.
+This document specifies the React adapter profile; implementation is tracked separately in US-006.
 
 ## API proposal
 
-The initial public shape is:
+The React adapter exposes a low-level `Slot` composition primitive:
 
 ```tsx
-<Slot>
+<Slot title="profile link">
   <a href="/profile">Profile</a>
 </Slot>
 ```
 
-The slot receives props that are merged onto its child. An explicit `asChild`
-prop is not required if the component itself always performs slot substitution.
-If the eventual API needs both ordinary rendering and child substitution, settle
-that separately before implementation.
+The primitive composes its props onto one target element. Higher-level component
+libraries may expose APIs such as `asChild`, but those are built on top of
+`Slot` and are not part of UniversalSlots' low-level API. `Slot` does not
+substitute for ordinary `children` composition.
 
 The first release should support one React element child. Arrays, strings,
 numbers, portals, and multiple children are not slot targets. Fragment support
@@ -43,8 +42,7 @@ for fragments.
 
 ## Semantics to adopt for the first release
 
-These are proposed defaults. Any intentional deviation should be recorded here
-before tests are written.
+These are the settled React v1 profile of the universal composition contract.
 
 ### Prop precedence
 
@@ -57,7 +55,7 @@ before tests are written.
   prop.
 - `ref` is special and follows the ref-composition rules below.
 
-This mirrors the common Radix Slot convention of child-first precedence.
+This follows the v1 target-wins precedence defined in the universal composition contract.
 
 ### Event handlers
 
@@ -92,6 +90,18 @@ decision; it should not be assumed to match every existing slot library.
 - Child style properties take precedence on conflicts.
 - Do not mutate either input object.
 - Non-object style values are invalid for this initial contract.
+
+### Nested composition
+
+Nested React `Slot` elements are supported. Composition follows the universal
+contract:
+
+- Ordinary props from the deepest target win conflicts.
+- Event handlers run deepest target first, then inner slot, then outer slot.
+- `className` values concatenate outer slot, inner slot, then target.
+- Style objects merge outer slot, inner slot, then target; the target wins.
+- All refs are composed and receive the same underlying instance, with cleanup
+  handled according to React 19 ref semantics.
 
 ### `ref`
 
