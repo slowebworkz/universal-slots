@@ -46,6 +46,10 @@ function Button({ asChild, children, ...props }) {
 target component. It does not implement a higher-level `asChild` API itself.
 The adapter currently targets React 19.
 
+Custom component targets must forward contributed props and the injected ref to
+the element they render. `Slot` cannot forward through a component that consumes
+or discards those values.
+
 See [ROADMAP.md](./ROADMAP.md) for the project plan and
 [polymorphic composition semantics](./docs/design/polymorphic-composition.md)
 for the composition contract.

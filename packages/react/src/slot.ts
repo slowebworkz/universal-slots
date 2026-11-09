@@ -1,13 +1,5 @@
-import {
-  cloneElement,
-  Fragment,
-  isValidElement,
-  useMemo,
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-  type RefCallback,
-} from "react";
+import { cloneElement, Fragment, isValidElement, useMemo } from "react";
+import type { ReactElement, ReactNode, Ref, RefCallback } from "react";
 
 type ComposableRef<T> =
   Ref<T> | ((instance: T | null) => void | (() => void)) | null | undefined;
@@ -61,11 +53,27 @@ function mergeStyles(slotStyle: unknown, targetStyle: unknown): unknown {
   return { ...(slotStyle as object), ...(targetStyle as object) };
 }
 
+// Maps each composed callback to the original refs it applies, so nested
+// compositions can flatten and deduplicate by original ref identity.
+const composedSources = new WeakMap<object, readonly ComposableRef<never>[]>();
+
+function flattenRefs<T>(refs: ComposableRef<T>[]): ComposableRef<T>[] {
+  return refs.flatMap((ref) =>
+    ref != null && typeof ref === "function" && composedSources.has(ref)
+      ? (composedSources.get(ref) as ComposableRef<T>[])
+      : [ref],
+  );
+}
+
 function composeRefs<T>(...refs: ComposableRef<T>[]): RefCallback<T> {
-  return (instance) => {
+  // The same ref can be contributed by several composition layers. Treat ref
+  // identity as the unit of composition so it is assigned and cleaned up once.
+  const uniqueRefs = [...new Set(flattenRefs(refs))];
+
+  const composed: RefCallback<T> = (instance) => {
     const cleanups: (() => void)[] = [];
 
-    for (const ref of refs) {
+    for (const ref of uniqueRefs) {
       if (ref == null) continue;
 
       if (typeof ref === "function") {
@@ -102,6 +110,9 @@ function composeRefs<T>(...refs: ComposableRef<T>[]): RefCallback<T> {
       }
     };
   };
+
+  composedSources.set(composed, uniqueRefs as ComposableRef<never>[]);
+  return composed;
 }
 
 /**

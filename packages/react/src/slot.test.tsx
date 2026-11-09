@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { createRef, type MouseEvent, type ReactNode } from "react";
+import { createRef } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -29,6 +30,13 @@ function CustomCallbackProbe({ onSelectItem }: { onSelectItem?: () => void }) {
       select
     </button>
   );
+}
+
+function ForwardingLink({
+  href,
+  ...props
+}: ComponentProps<"a"> & { href: string }) {
+  return <a href={href} {...props} />;
 }
 
 // Vitest globals are off, so Testing Library cannot register its own cleanup.
@@ -122,6 +130,23 @@ describe("Slot conformance", () => {
       );
 
       expect(screen.getByTestId("probe").textContent).toBe("from-slot");
+    });
+
+    it("forwards contributed props and refs through a custom target", () => {
+      const linkRef = createRef<HTMLAnchorElement>();
+
+      render(
+        <Slot aria-label="profile link" ref={linkRef}>
+          <ForwardingLink href="/profile" data-testid="target">
+            Profile
+          </ForwardingLink>
+        </Slot>,
+      );
+
+      const target = screen.getByTestId("target");
+      expect(target.getAttribute("href")).toBe("/profile");
+      expect(target.getAttribute("aria-label")).toBe("profile link");
+      expect(linkRef.current).toBe(target);
     });
   });
 
@@ -370,24 +395,140 @@ describe("Slot conformance", () => {
       expect(childRef.current).toBe(instance);
     });
 
-    it("R-07 does not detach or re-attach composed refs on re-render", () => {
+    it("R-07 keeps composed refs attached when a parent creates a new child element", () => {
       const slotRef = vi.fn();
       const childRef = vi.fn();
 
-      const ui = (
-        <Slot ref={slotRef}>
-          <button ref={childRef}>target</button>
-        </Slot>
+      function Parent({ label }: { label: string }) {
+        return (
+          <Slot ref={slotRef}>
+            <button ref={childRef}>{label}</button>
+          </Slot>
+        );
+      }
+
+      const { rerender } = render(<Parent label="first" />);
+
+      expect(slotRef).toHaveBeenCalledTimes(1);
+      expect(childRef).toHaveBeenCalledTimes(1);
+
+      rerender(<Parent label="second" />);
+      rerender(<Parent label="third" />);
+
+      expect(slotRef).toHaveBeenCalledTimes(1);
+      expect(childRef).toHaveBeenCalledTimes(1);
+      expect(slotRef).not.toHaveBeenCalledWith(null);
+      expect(childRef).not.toHaveBeenCalledWith(null);
+    });
+
+    it("R-08 invokes an identical callback ref only once and cleans it up once", () => {
+      const cleanup = vi.fn();
+      const sharedRef = vi.fn(() => cleanup);
+
+      const view = render(
+        <Slot ref={sharedRef}>
+          <button ref={sharedRef} data-testid="target">
+            target
+          </button>
+        </Slot>,
       );
-      const { rerender } = render(ui);
-      expect(slotRef).toHaveBeenCalledTimes(1);
-      expect(childRef).toHaveBeenCalledTimes(1);
 
-      rerender(ui);
-      rerender(ui);
+      const target = screen.getByTestId("target");
+      expect(sharedRef).toHaveBeenCalledOnce();
+      expect(sharedRef).toHaveBeenCalledWith(target);
 
-      expect(slotRef).toHaveBeenCalledTimes(1);
-      expect(childRef).toHaveBeenCalledTimes(1);
+      view.unmount();
+
+      expect(cleanup).toHaveBeenCalledOnce();
+      expect(sharedRef).toHaveBeenCalledOnce();
+    });
+
+    it("R-09 assigns and clears an identical object ref only once", () => {
+      let current: HTMLButtonElement | null = null;
+      const setCurrent = vi.fn((value: HTMLButtonElement | null) => {
+        current = value;
+      });
+      const sharedRef = {
+        get current() {
+          return current;
+        },
+        set current(value: HTMLButtonElement | null) {
+          setCurrent(value);
+        },
+      };
+
+      const view = render(
+        <Slot ref={sharedRef}>
+          <button ref={sharedRef} data-testid="target">
+            target
+          </button>
+        </Slot>,
+      );
+
+      expect(current).toBe(screen.getByTestId("target"));
+      expect(setCurrent).toHaveBeenCalledOnce();
+
+      view.unmount();
+
+      expect(current).toBeNull();
+      expect(setCurrent).toHaveBeenCalledTimes(2);
+      expect(setCurrent).toHaveBeenLastCalledWith(null);
+    });
+
+    it("R-10 invokes one callback ref once across three nested slots", () => {
+      const cleanup = vi.fn();
+      const sharedRef = vi.fn(() => cleanup);
+
+      const view = render(
+        <Slot ref={sharedRef}>
+          <Slot ref={sharedRef}>
+            <button ref={sharedRef} data-testid="target">
+              target
+            </button>
+          </Slot>
+        </Slot>,
+      );
+
+      expect(sharedRef).toHaveBeenCalledOnce();
+      expect(sharedRef).toHaveBeenCalledWith(screen.getByTestId("target"));
+
+      view.unmount();
+
+      expect(cleanup).toHaveBeenCalledOnce();
+      expect(sharedRef).toHaveBeenCalledOnce();
+    });
+
+    it("R-11 assigns and clears one object ref once across three nested slots", () => {
+      let current: HTMLButtonElement | null = null;
+      const setCurrent = vi.fn((value: HTMLButtonElement | null) => {
+        current = value;
+      });
+      const sharedRef = {
+        get current() {
+          return current;
+        },
+        set current(value: HTMLButtonElement | null) {
+          setCurrent(value);
+        },
+      };
+
+      const view = render(
+        <Slot ref={sharedRef}>
+          <Slot ref={sharedRef}>
+            <button ref={sharedRef} data-testid="target">
+              target
+            </button>
+          </Slot>
+        </Slot>,
+      );
+
+      expect(current).toBe(screen.getByTestId("target"));
+      expect(setCurrent).toHaveBeenCalledOnce();
+
+      view.unmount();
+
+      expect(current).toBeNull();
+      expect(setCurrent).toHaveBeenCalledTimes(2);
     });
 
     it("R-05 runs callback ref cleanup functions on unmount", () => {
@@ -493,79 +634,109 @@ describe("Slot conformance", () => {
 
       expect(document.body.contains(screen.getByTestId("target"))).toBe(true);
     });
-    describe("nested composition", () => {
-      it("N-01 applies ordinary props from outer to inner with target winning", () => {
-        render(
-          <Slot title="outer">
-            <Slot title="inner">
-              <button data-testid="target" title="target">
-                target
-              </button>
-            </Slot>
-          </Slot>,
-        );
+  });
 
-        expect(screen.getByTestId("target").getAttribute("title")).toBe(
-          "target",
-        );
-      });
+  describe("nested composition", () => {
+    it("N-05 composes refs across three levels and cleans each up once", () => {
+      const outerCleanup = vi.fn();
+      const middleCleanup = vi.fn();
+      const targetCleanup = vi.fn();
+      const outerRef = vi.fn(() => outerCleanup);
+      const middleRef = vi.fn(() => middleCleanup);
+      const targetRef = vi.fn(() => targetCleanup);
 
-      it("N-02 runs handlers from target outward", () => {
-        const order: string[] = [];
-        const targetHandler = vi.fn(() => order.push("target"));
-        const innerHandler = vi.fn(() => order.push("inner"));
-        const outerHandler = vi.fn(() => order.push("outer"));
+      const view = render(
+        <Slot ref={outerRef}>
+          <Slot ref={middleRef}>
+            <button ref={targetRef} data-testid="target">
+              target
+            </button>
+          </Slot>
+        </Slot>,
+      );
 
-        render(
-          <Slot onClick={outerHandler}>
-            <Slot onClick={innerHandler}>
-              <button data-testid="target" onClick={targetHandler}>
-                target
-              </button>
-            </Slot>
-          </Slot>,
-        );
+      const target = screen.getByTestId("target");
+      expect(outerRef).toHaveBeenCalledOnce();
+      expect(middleRef).toHaveBeenCalledOnce();
+      expect(targetRef).toHaveBeenCalledOnce();
+      expect(outerRef).toHaveBeenCalledWith(target);
+      expect(middleRef).toHaveBeenCalledWith(target);
+      expect(targetRef).toHaveBeenCalledWith(target);
 
-        fireEvent.click(screen.getByTestId("target"));
+      view.unmount();
 
-        expect(order).toEqual(["target", "inner", "outer"]);
-      });
+      expect(outerCleanup).toHaveBeenCalledOnce();
+      expect(middleCleanup).toHaveBeenCalledOnce();
+      expect(targetCleanup).toHaveBeenCalledOnce();
+    });
 
-      it("N-03 concatenates classes from outer to target", () => {
-        render(
-          <Slot className="outer">
-            <Slot className="inner">
-              <button data-testid="target" className="target">
-                target
-              </button>
-            </Slot>
-          </Slot>,
-        );
+    it("N-01 applies ordinary props from outer to inner with target winning", () => {
+      render(
+        <Slot title="outer">
+          <Slot title="inner">
+            <button data-testid="target" title="target">
+              target
+            </button>
+          </Slot>
+        </Slot>,
+      );
 
-        expect(screen.getByTestId("target").className).toBe(
-          "outer inner target",
-        );
-      });
+      expect(screen.getByTestId("target").getAttribute("title")).toBe("target");
+    });
 
-      it("N-04 merges styles from outer to target", () => {
-        render(
-          <Slot style={{ color: "red", padding: "1px" }}>
-            <Slot style={{ color: "green" }}>
-              <button
-                data-testid="target"
-                style={{ color: "blue", margin: "2px" }}
-              >
-                target
-              </button>
-            </Slot>
-          </Slot>,
-        );
+    it("N-02 runs handlers from target outward", () => {
+      const order: string[] = [];
+      const targetHandler = vi.fn(() => order.push("target"));
+      const innerHandler = vi.fn(() => order.push("inner"));
+      const outerHandler = vi.fn(() => order.push("outer"));
 
-        const target = screen.getByTestId("target") as HTMLButtonElement;
-        expect(target.style.color).toBe("blue");
-        expect(target.style.padding).toBe("1px");
-        expect(target.style.margin).toBe("2px");
-      });
+      render(
+        <Slot onClick={outerHandler}>
+          <Slot onClick={innerHandler}>
+            <button data-testid="target" onClick={targetHandler}>
+              target
+            </button>
+          </Slot>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(order).toEqual(["target", "inner", "outer"]);
+    });
+
+    it("N-03 concatenates classes from outer to target", () => {
+      render(
+        <Slot className="outer">
+          <Slot className="inner">
+            <button data-testid="target" className="target">
+              target
+            </button>
+          </Slot>
+        </Slot>,
+      );
+
+      expect(screen.getByTestId("target").className).toBe("outer inner target");
+    });
+
+    it("N-04 merges styles from outer to target", () => {
+      render(
+        <Slot style={{ color: "red", padding: "1px" }}>
+          <Slot style={{ color: "green" }}>
+            <button
+              data-testid="target"
+              style={{ color: "blue", margin: "2px" }}
+            >
+              target
+            </button>
+          </Slot>
+        </Slot>,
+      );
+
+      const target = screen.getByTestId("target") as HTMLButtonElement;
+      expect(target.style.color).toBe("blue");
+      expect(target.style.padding).toBe("1px");
+      expect(target.style.margin).toBe("2px");
     });
   });
 });
