@@ -1,2 +1,1 @@
-// Public exports will be added when the React Slot implementation is ready (US-006).
-export {};
+export { Slot, type SlotProps } from "./slot.js";

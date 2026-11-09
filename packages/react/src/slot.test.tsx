@@ -1,11 +1,8 @@
 // @vitest-environment jsdom
 
-// These contract tests are skipped until US-006 implements Slot; their assertions
-// remain in place and are typechecked in the meantime.
-
 import { createRef, type MouseEvent, type ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Slot } from "./slot.js";
 
@@ -34,9 +31,12 @@ function CustomCallbackProbe({ onSelectItem }: { onSelectItem?: () => void }) {
   );
 }
 
+// Vitest globals are off, so Testing Library cannot register its own cleanup.
+afterEach(cleanup);
+
 describe("Slot conformance", () => {
   describe("prop precedence", () => {
-    it.skip("P-01 forwards a slot prop absent from the child", () => {
+    it("P-01 forwards a slot prop absent from the child", () => {
       render(
         <Slot title="from-slot">
           <button data-testid="target">target</button>
@@ -48,7 +48,7 @@ describe("Slot conformance", () => {
       );
     });
 
-    it.skip("P-02 lets the child win for an ordinary conflicting prop", () => {
+    it("P-02 lets the child win for an ordinary conflicting prop", () => {
       render(
         <Slot title="from-slot">
           <button data-testid="target" title="from-child">
@@ -62,7 +62,7 @@ describe("Slot conformance", () => {
       );
     });
 
-    it.skip("P-03 preserves an explicit child false value", () => {
+    it("P-03 preserves an explicit child false value", () => {
       const Child = ({ disabled }: { disabled?: boolean }) => (
         <button data-testid="target" disabled={disabled}>
           target
@@ -80,7 +80,7 @@ describe("Slot conformance", () => {
       );
     });
 
-    it.skip("P-04 forwards a slot prop when the child prop is absent", () => {
+    it("P-04 forwards a slot prop when the child prop is absent", () => {
       render(
         <Slot aria-label="slot label">
           <button data-testid="target">target</button>
@@ -92,7 +92,7 @@ describe("Slot conformance", () => {
       );
     });
 
-    it.skip("P-04a child undefined overrides slot", () => {
+    it("P-04a child undefined overrides slot", () => {
       render(
         <Slot title="slot title">
           <button data-testid="target" title={undefined}>
@@ -104,7 +104,7 @@ describe("Slot conformance", () => {
       expect(screen.getByTestId("target").hasAttribute("title")).toBe(false);
     });
 
-    it.skip("P-05 preserves the child element's own children", () => {
+    it("P-05 preserves the child element's own children", () => {
       render(
         <Slot>
           <button data-testid="target">child content</button>
@@ -113,10 +113,20 @@ describe("Slot conformance", () => {
 
       expect(screen.getByTestId("target").textContent).toBe("child content");
     });
+
+    it("forwards props to custom component targets without replacing them", () => {
+      render(
+        <Slot value="from-slot">
+          <PropProbe />
+        </Slot>,
+      );
+
+      expect(screen.getByTestId("probe").textContent).toBe("from-slot");
+    });
   });
 
   describe("event handlers", () => {
-    it.skip("E-01 invokes child handler before slot handler", () => {
+    it("E-01 invokes child handler before slot handler", () => {
       const order: string[] = [];
       const childHandler = vi.fn(() => order.push("child"));
       const slotHandler = vi.fn(() => order.push("slot"));
@@ -134,7 +144,7 @@ describe("Slot conformance", () => {
       expect(order).toEqual(["child", "slot"]);
     });
 
-    it.skip("E-02 slot handler runs after child preventDefault", () => {
+    it("E-02 slot handler runs after child preventDefault", () => {
       const slotHandler = vi.fn();
       const childHandler = vi.fn((event: MouseEvent) => event.preventDefault());
 
@@ -152,7 +162,7 @@ describe("Slot conformance", () => {
       expect(slotHandler).toHaveBeenCalledOnce();
     });
 
-    it.skip("E-03/E-03a slot handler forwards without child handler", () => {
+    it("E-03/E-03a slot handler forwards without child handler", () => {
       const slotHandler = vi.fn();
 
       render(
@@ -166,7 +176,7 @@ describe("Slot conformance", () => {
       expect(slotHandler).toHaveBeenCalledOnce();
     });
 
-    it.skip("E-03b child handler works without slot handler", () => {
+    it("E-03b child handler works without slot handler", () => {
       const childHandler = vi.fn();
 
       render(
@@ -182,7 +192,7 @@ describe("Slot conformance", () => {
       expect(childHandler).toHaveBeenCalledOnce();
     });
 
-    it.skip("E-03c undefined child handler blocks slot handler", () => {
+    it("E-03c undefined child handler blocks slot handler", () => {
       const slotHandler = vi.fn();
 
       render(
@@ -198,7 +208,7 @@ describe("Slot conformance", () => {
       expect(slotHandler).not.toHaveBeenCalled();
     });
 
-    it.skip("E-05 composes custom on[A-Z] callbacks", () => {
+    it("E-05 composes custom on[A-Z] callbacks", () => {
       const childHandler = vi.fn();
       const slotHandler = vi.fn();
 
@@ -214,7 +224,7 @@ describe("Slot conformance", () => {
       expect(slotHandler).toHaveBeenCalledOnce();
     });
 
-    it.skip("E-04 does not compose non-event function props", () => {
+    it("E-04 does not compose non-event function props", () => {
       const childHandler = vi.fn();
       const slotHandler = vi.fn();
 
@@ -232,7 +242,7 @@ describe("Slot conformance", () => {
   });
 
   describe("className", () => {
-    it.skip("C-01 concatenates slot class before child class", () => {
+    it("C-01 concatenates slot class before child class", () => {
       render(
         <Slot className="slot-class">
           <button className="child-class" data-testid="target">
@@ -249,7 +259,7 @@ describe("Slot conformance", () => {
       );
     });
 
-    it.skip("C-02 preserves a single non-empty class value", () => {
+    it("C-02 preserves a single non-empty class value", () => {
       render(
         <Slot className="slot-class">
           <button data-testid="target">target</button>
@@ -261,7 +271,7 @@ describe("Slot conformance", () => {
   });
 
   describe("style", () => {
-    it.skip("S-01 merges distinct style keys", () => {
+    it("S-01 merges distinct style keys", () => {
       render(
         <Slot style={{ color: "red" }}>
           <button data-testid="target" style={{ backgroundColor: "blue" }}>
@@ -275,7 +285,7 @@ describe("Slot conformance", () => {
       expect(target.style.backgroundColor).toBe("blue");
     });
 
-    it.skip("S-02 gives child style precedence on conflicts", () => {
+    it("S-02 gives child style precedence on conflicts", () => {
       render(
         <Slot style={{ color: "red" }}>
           <button data-testid="target" style={{ color: "blue" }}>
@@ -289,7 +299,7 @@ describe("Slot conformance", () => {
       ).toBe("blue");
     });
 
-    it.skip("S-03 does not mutate either style object", () => {
+    it("S-03 does not mutate either style object", () => {
       const slotStyle = { color: "red" };
       const childStyle = { backgroundColor: "blue" };
       const slotBefore = { ...slotStyle };
@@ -309,7 +319,7 @@ describe("Slot conformance", () => {
   });
 
   describe("refs", () => {
-    it.skip("R-01 callback refs receive same instance", () => {
+    it("R-01 callback refs receive same instance", () => {
       const slotRef = vi.fn();
       const childRef = vi.fn();
 
@@ -326,7 +336,7 @@ describe("Slot conformance", () => {
       expect(childRef).toHaveBeenCalledWith(instance);
     });
 
-    it.skip("R-02 object refs receive same instance", () => {
+    it("R-02 object refs receive same instance", () => {
       const slotRef = createRef<HTMLButtonElement>();
       const childRef = createRef<HTMLButtonElement>();
 
@@ -343,7 +353,7 @@ describe("Slot conformance", () => {
       expect(childRef.current).toBe(instance);
     });
 
-    it.skip("R-03 composes callback and object refs", () => {
+    it("R-03 composes callback and object refs", () => {
       const slotRef = vi.fn();
       const childRef = createRef<HTMLButtonElement>();
 
@@ -360,7 +370,27 @@ describe("Slot conformance", () => {
       expect(childRef.current).toBe(instance);
     });
 
-    it.skip("R-05 runs callback ref cleanup functions on unmount", () => {
+    it("R-07 does not detach or re-attach composed refs on re-render", () => {
+      const slotRef = vi.fn();
+      const childRef = vi.fn();
+
+      const ui = (
+        <Slot ref={slotRef}>
+          <button ref={childRef}>target</button>
+        </Slot>
+      );
+      const { rerender } = render(ui);
+      expect(slotRef).toHaveBeenCalledTimes(1);
+      expect(childRef).toHaveBeenCalledTimes(1);
+
+      rerender(ui);
+      rerender(ui);
+
+      expect(slotRef).toHaveBeenCalledTimes(1);
+      expect(childRef).toHaveBeenCalledTimes(1);
+    });
+
+    it("R-05 runs callback ref cleanup functions on unmount", () => {
       const slotCleanup = vi.fn();
       const childCleanup = vi.fn();
       const slotRef = vi.fn(() => slotCleanup);
@@ -380,7 +410,7 @@ describe("Slot conformance", () => {
       expect(childCleanup).toHaveBeenCalledOnce();
     });
 
-    it.skip("R-06 callback refs receive null on detach", () => {
+    it("R-06 callback refs receive null on detach", () => {
       const slotRef = vi.fn();
       const childRef = vi.fn();
 
@@ -397,14 +427,35 @@ describe("Slot conformance", () => {
       expect(slotRef).toHaveBeenLastCalledWith(null);
       expect(childRef).toHaveBeenLastCalledWith(null);
     });
+
+    it("R-04 clears object refs on unmount", () => {
+      const slotRef = createRef<HTMLButtonElement>();
+      const childRef = createRef<HTMLButtonElement>();
+
+      const view = render(
+        <Slot ref={slotRef}>
+          <button ref={childRef} data-testid="target">
+            target
+          </button>
+        </Slot>,
+      );
+
+      expect(slotRef.current).toBe(screen.getByTestId("target"));
+      expect(childRef.current).toBe(screen.getByTestId("target"));
+
+      view.unmount();
+
+      expect(slotRef.current).toBeNull();
+      expect(childRef.current).toBeNull();
+    });
   });
 
   describe("child validation", () => {
-    it.skip("V-01 throws a stable error when there is no child", () => {
+    it("V-01 throws a stable error when there is no child", () => {
       expect(() => render(<Slot />)).toThrow(slotError);
     });
 
-    it.skip("V-02 throws a stable error for multiple children", () => {
+    it("V-02 throws a stable error for multiple children", () => {
       expect(() =>
         render(
           <Slot>
@@ -415,13 +466,13 @@ describe("Slot conformance", () => {
       ).toThrow(slotError);
     });
 
-    it.skip.each(["text", 123])("V-03 rejects child %s", (child) => {
+    it.each(["text", 123])("V-03 rejects child %s", (child) => {
       expect(() => render(<Slot>{child as ReactNode}</Slot>)).toThrow(
         slotError,
       );
     });
 
-    it.skip("V-04 rejects fragment children", () => {
+    it("V-04 rejects fragment children", () => {
       expect(() =>
         render(
           <Slot>
@@ -433,7 +484,7 @@ describe("Slot conformance", () => {
       ).toThrow(slotError);
     });
 
-    it.skip("V-05 renders a valid single element", () => {
+    it("V-05 renders a valid single element", () => {
       render(
         <Slot>
           <button data-testid="target">target</button>
@@ -441,6 +492,80 @@ describe("Slot conformance", () => {
       );
 
       expect(document.body.contains(screen.getByTestId("target"))).toBe(true);
+    });
+    describe("nested composition", () => {
+      it("N-01 applies ordinary props from outer to inner with target winning", () => {
+        render(
+          <Slot title="outer">
+            <Slot title="inner">
+              <button data-testid="target" title="target">
+                target
+              </button>
+            </Slot>
+          </Slot>,
+        );
+
+        expect(screen.getByTestId("target").getAttribute("title")).toBe(
+          "target",
+        );
+      });
+
+      it("N-02 runs handlers from target outward", () => {
+        const order: string[] = [];
+        const targetHandler = vi.fn(() => order.push("target"));
+        const innerHandler = vi.fn(() => order.push("inner"));
+        const outerHandler = vi.fn(() => order.push("outer"));
+
+        render(
+          <Slot onClick={outerHandler}>
+            <Slot onClick={innerHandler}>
+              <button data-testid="target" onClick={targetHandler}>
+                target
+              </button>
+            </Slot>
+          </Slot>,
+        );
+
+        fireEvent.click(screen.getByTestId("target"));
+
+        expect(order).toEqual(["target", "inner", "outer"]);
+      });
+
+      it("N-03 concatenates classes from outer to target", () => {
+        render(
+          <Slot className="outer">
+            <Slot className="inner">
+              <button data-testid="target" className="target">
+                target
+              </button>
+            </Slot>
+          </Slot>,
+        );
+
+        expect(screen.getByTestId("target").className).toBe(
+          "outer inner target",
+        );
+      });
+
+      it("N-04 merges styles from outer to target", () => {
+        render(
+          <Slot style={{ color: "red", padding: "1px" }}>
+            <Slot style={{ color: "green" }}>
+              <button
+                data-testid="target"
+                style={{ color: "blue", margin: "2px" }}
+              >
+                target
+              </button>
+            </Slot>
+          </Slot>,
+        );
+
+        const target = screen.getByTestId("target") as HTMLButtonElement;
+        expect(target.style.color).toBe("blue");
+        expect(target.style.padding).toBe("1px");
+        expect(target.style.margin).toBe("2px");
+      });
     });
   });
 });

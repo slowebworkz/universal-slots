@@ -4,11 +4,11 @@ Universal slot composition technology for modern UI frameworks.
 
 UniversalSlots aims to define a framework-neutral composition contract and provide framework adapters that implement it without pretending that every framework has identical slot or projection semantics.
 
-> **Status:** Early planning / scaffold. Public APIs and behavior are not yet stable.
+> **Status:** Experimental React 19 adapter in development. Public APIs and behavior are not yet stable.
 
 ## Goals
 
-- Define portable slot-composition semantics.
+- Define portable polymorphic composition semantics.
 - Provide framework adapters and capability declarations.
 - Establish shared conformance tests for adapters.
 - Preserve framework-native behavior where appropriate.
@@ -26,7 +26,29 @@ pnpm test
 pnpm typecheck
 ```
 
-See [ROADMAP.md](./ROADMAP.md) for the proposed project plan.
+## React adapter
+
+The initial React adapter exposes a low-level `Slot` composition primitive:
+
+```tsx
+import { Slot } from "@universal-slots/react";
+
+function Button({ asChild, children, ...props }) {
+  if (asChild) {
+    return <Slot {...props}>{children}</Slot>;
+  }
+
+  return <button {...props}>{children}</button>;
+}
+```
+
+`Slot` composes props and behavior onto one React element while preserving the
+target component. It does not implement a higher-level `asChild` API itself.
+The adapter currently targets React 19.
+
+See [ROADMAP.md](./ROADMAP.md) for the project plan and
+[polymorphic composition semantics](./docs/design/polymorphic-composition.md)
+for the composition contract.
 
 ## Workspace conventions
 
