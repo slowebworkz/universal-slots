@@ -3,6 +3,7 @@ export {
   type CompositionProps,
   type EventHandlerClassifier,
   type MergeCompositionPropsOptions,
+  type MergeEventPolicy,
   type MergeValuePolicy,
 } from "./composition/merge-props.js";
 

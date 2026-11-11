@@ -149,7 +149,47 @@ The core policy engine currently defines:
   fall back to the non-nullish value.
 - Non-object, non-nullish style values are rejected by the default policy.
 - Adapters may override class/style _value handling_ for framework-native
-  representations, but must preserve the contract's merge order and precedence.
+  representations. They may also supply `mergeEvent(source, target)` to compose
+  two distinct event-handler functions according to their own policy. The policy
+  is called only when both values are functions; source-only and target-only
+  values, explicitly undefined target values, and non-function values retain the
+  ordinary behavior. Identical handler references are still invoked once and do
+  not call the custom policy.
+
+The default event policy remains target-first, then source, without cancellation
+semantics. A consumer that wants source-first execution can supply a policy that
+invokes source before target. A cancellation-aware policy can invoke target first
+and invoke source only when the event has not been default-prevented. The core
+policy receives and forwards opaque values; it has no React or SyntheticEvent
+dependency. For example, a React-facing adapter can provide cancellation-aware
+composition without making the core aware of React event types:
+
+```ts
+import {
+  mergeCompositionProps,
+  type MergeEventPolicy,
+} from "@universal-slots/core";
+
+type CancellableEvent = { defaultPrevented: boolean };
+
+const mergeCancellationAwareEvent =
+  (source: unknown, target: unknown) =>
+  (...args: unknown[]) => {
+    const [event] = args as [CancellableEvent | undefined];
+    (target as (...values: unknown[]) => void)(...args);
+    if (event?.defaultPrevented !== true) {
+      (source as (...values: unknown[]) => void)(...args);
+    }
+  };
+
+mergeCompositionProps(sourceProps, targetProps, {
+  isEventHandler: (name) => /^on[A-Z]/.test(name),
+  mergeEvent: mergeCancellationAwareEvent,
+});
+```
+
+The adapter may type this boundary more narrowly for its own event model; the
+core contract intentionally keeps the policy signature framework-neutral.
 
 These are UniversalSlots semantics, not an attempt to copy every existing
 consumer's policy. In particular, the current Praxis implementation suppresses
@@ -188,8 +228,9 @@ That profile is not itself the framework-neutral contract. As the universal cont
 ## Initial composition contract (v1)
 
 The following decisions are settled for the initial contract. They are deliberately
-simple and fixed; adapters must not introduce configurable precedence or handler
-policies that make the shared behavior unpredictable.
+simple and fixed for ordinary prop precedence and default handler behavior. An
+adapter may explicitly supply an event-composition policy where its framework
+or consuming component library requires different event semantics.
 
 ### API and target model
 
@@ -218,8 +259,11 @@ policies that make the shared behavior unpredictable.
 ### Event handlers
 
 - Recognized event handlers are composed rather than treated as ordinary props.
-- The target handler runs first; the composing handler runs second.
-- `preventDefault()` does not suppress the composing handler.
+- By default, the target handler runs first; the composing handler runs second.
+- By default, `preventDefault()` does not suppress the composing handler.
+- An adapter may override composition of two distinct callable handlers with
+  `mergeEvent`; source-only, target-only, non-function, and identical-reference
+  cases retain the core's defined handling.
 - Only handlers recognized by the adapter's event convention are composed.
   Arbitrary function-valued props are ordinary props and follow target-wins
   precedence.

@@ -75,7 +75,9 @@ This follows the v1 target-wins precedence defined in the universal composition 
 - Do not compose function-valued props whose names do not match the pattern.
 
 The event-composition cancellation policy is a deliberate UniversalSlots
-decision; it should not be assumed to match every existing slot library.
+decision; it should not be assumed to match every existing slot library. The
+core accepts an optional `mergeEvent` policy, but the React `Slot` adapter does
+not supply one and always uses the default behavior described above.
 
 ### `className`
 
