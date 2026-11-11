@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Slot } from "./index.js";
+import type { SlotCompositionOptions } from "./index.js";
 
 const slotError =
   "UniversalSlots Slot expects exactly one non-fragment React element child.";
@@ -167,6 +168,196 @@ describe("Slot conformance", () => {
       fireEvent.click(screen.getByTestId("target"));
 
       expect(order).toEqual(["child", "slot"]);
+    });
+
+    it("uses a custom source-first event policy supplied through composition", () => {
+      const order: string[] = [];
+      const slotHandler = vi.fn(() => order.push("slot"));
+      const childHandler = vi.fn(() => order.push("child"));
+
+      render(
+        <Slot
+          composition={{
+            mergeEvent:
+              (sourceHandler, targetHandler) =>
+              (...args: never[]) => {
+                sourceHandler(...args);
+                targetHandler(...args);
+              },
+          }}
+          onClick={slotHandler}
+        >
+          <button data-testid="target" onClick={childHandler}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(order).toEqual(["slot", "child"]);
+    });
+
+    it("supports cancellation-aware child-first event composition", () => {
+      const slotHandler = vi.fn();
+      const childHandler = vi.fn((event: MouseEvent) => event.preventDefault());
+
+      render(
+        <Slot
+          composition={{
+            mergeEvent:
+              (sourceHandler, targetHandler) =>
+              (...args: never[]) => {
+                const event = args[0] as
+                  { defaultPrevented?: boolean } | undefined;
+
+                targetHandler(...args);
+                if (!event?.defaultPrevented) {
+                  sourceHandler(...args);
+                }
+              },
+          }}
+          onClick={slotHandler}
+        >
+          <button data-testid="target" onClick={childHandler}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(childHandler).toHaveBeenCalledOnce();
+      expect(slotHandler).not.toHaveBeenCalled();
+    });
+
+    it("applies a custom event policy independently to multiple event props", () => {
+      const mergeEvent = vi.fn(
+        (
+          sourceHandler: (...args: never[]) => unknown,
+          targetHandler: (...args: never[]) => unknown,
+        ) =>
+          (...args: never[]) => {
+            targetHandler(...args);
+            sourceHandler(...args);
+          },
+      );
+      const slotClick = vi.fn();
+      const childClick = vi.fn();
+      const slotFocus = vi.fn();
+      const childFocus = vi.fn();
+
+      render(
+        <Slot
+          composition={{ mergeEvent }}
+          onClick={slotClick}
+          onFocus={slotFocus}
+        >
+          <button
+            data-testid="target"
+            onClick={childClick}
+            onFocus={childFocus}
+          >
+            target
+          </button>
+        </Slot>,
+      );
+
+      const target = screen.getByTestId("target");
+      fireEvent.click(target);
+      fireEvent.focus(target);
+
+      expect(mergeEvent).toHaveBeenCalledTimes(2);
+      expect(childClick).toHaveBeenCalledOnce();
+      expect(slotClick).toHaveBeenCalledOnce();
+      expect(childFocus).toHaveBeenCalledOnce();
+      expect(slotFocus).toHaveBeenCalledOnce();
+    });
+
+    it("consumes composition options instead of forwarding them to the child", () => {
+      const receivedProps: Record<string, unknown>[] = [];
+
+      function CompositionTarget(props: Record<string, unknown>) {
+        receivedProps.push(props);
+        return <button data-testid="target">target</button>;
+      }
+
+      render(
+        <Slot composition={{ mergeEvent: (source, target) => target }}>
+          <CompositionTarget />
+        </Slot>,
+      );
+
+      expect(receivedProps.at(-1)).not.toHaveProperty("composition");
+    });
+
+    it("preserves a composition prop already supplied by the target", () => {
+      const receivedProps: Record<string, unknown>[] = [];
+      const targetComposition = { target: true };
+
+      function CompositionTarget(props: Record<string, unknown>) {
+        receivedProps.push(props);
+        return <button data-testid="target">target</button>;
+      }
+
+      render(
+        <Slot composition={{ mergeEvent: (source, target) => target }}>
+          <CompositionTarget composition={targetComposition} />
+        </Slot>,
+      );
+
+      expect(receivedProps.at(-1)?.composition).toBe(targetComposition);
+    });
+
+    it("does not allow untyped composition options to override event classification", () => {
+      const mergeEvent = vi.fn(
+        (
+          sourceHandler: (...args: never[]) => unknown,
+          targetHandler: (...args: never[]) => unknown,
+        ) =>
+          (...args: never[]) => {
+            targetHandler(...args);
+            sourceHandler(...args);
+          },
+      );
+      const composition = {
+        mergeEvent,
+        isEventHandler: () => false,
+      } as unknown as SlotCompositionOptions;
+      const slotHandler = vi.fn();
+      const childHandler = vi.fn();
+
+      render(
+        <Slot composition={composition} onClick={slotHandler}>
+          <button data-testid="target" onClick={childHandler}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(mergeEvent).toHaveBeenCalledOnce();
+      expect(childHandler).toHaveBeenCalledOnce();
+      expect(slotHandler).toHaveBeenCalledOnce();
+    });
+
+    it("does not invoke a custom policy when both layers use the same handler", () => {
+      const sharedHandler = vi.fn();
+      const mergeEvent = vi.fn();
+
+      render(
+        <Slot composition={{ mergeEvent }} onClick={sharedHandler}>
+          <button data-testid="target" onClick={sharedHandler}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(sharedHandler).toHaveBeenCalledOnce();
+      expect(mergeEvent).not.toHaveBeenCalled();
     });
 
     it("E-02 slot handler runs after child preventDefault", () => {

@@ -1,4 +1,7 @@
-import { mergeCompositionProps } from "@universal-slots/core";
+import {
+  mergeCompositionProps,
+  type MergeEventPolicy,
+} from "@universal-slots/core";
 import { cloneElement, Fragment, isValidElement, useMemo } from "react";
 import type {
   ElementType,
@@ -13,6 +16,12 @@ import type { ReactTargetRef } from "./types.js";
 type ComposableRef<T> =
   Ref<T> | ((instance: T | null) => void | (() => void)) | null | undefined;
 
+/** Optional framework-neutral policies that customize React Slot composition. */
+export interface SlotCompositionOptions {
+  /** Override how distinct recognized event handlers are composed. */
+  mergeEvent?: MergeEventPolicy;
+}
+
 /**
  * Props accepted by the low-level Slot primitive.
  *
@@ -26,6 +35,7 @@ export type SlotProps<Target extends ElementType = ElementType> = Record<
   unknown
 > & {
   children?: ReactNode;
+  composition?: SlotCompositionOptions;
   ref?: ReactTargetRef<Target>;
 };
 
@@ -108,6 +118,7 @@ function composeRefs<T>(...refs: ComposableRef<T>[]): RefCallback<T> {
 export function Slot<Target extends ElementType = ElementType>({
   children,
   ref: slotRef,
+  composition,
   ...slotProps
 }: SlotProps<Target>) {
   // Hooks run before validation so the hook order never depends on a throw.
@@ -132,6 +143,11 @@ export function Slot<Target extends ElementType = ElementType>({
   const target = children as ReactElement<Record<string, unknown>>;
   const mergedProps = mergeCompositionProps(slotProps, target.props, {
     isEventHandler,
+    // Pick known options explicitly so untyped input cannot override
+    // event classification or other core options.
+    ...(composition?.mergeEvent != null && {
+      mergeEvent: composition.mergeEvent,
+    }),
   });
 
   if (composedRef != null) {
