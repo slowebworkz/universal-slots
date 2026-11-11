@@ -1,8 +1,8 @@
 # React Slot Semantics
 
-Status: proposed specification for the initial React adapter
+Status: implemented React 19 profile; experimental and subject to conformance review
 
-This document defines the behavior to settle before implementing the React adapter.
+This document records the settled behavior for the initial React adapter profile.
 Radix Slot is a compatibility reference, not an automatic source of requirements.
 UniversalSlots should adopt behavior intentionally and document any differences.
 
@@ -18,9 +18,9 @@ props and applies them to a single child element. This is distinct from native
 content projection (such as Web Component `<slot>`), which does not replace a
 child element or merge its props.
 
-This document specifies the React adapter profile; implementation is tracked separately in US-006.
+This document specifies the React adapter profile. The initial implementation is tracked in US-006; lifecycle hardening is tracked in US-006a.
 
-## API proposal
+## API
 
 The React adapter exposes a low-level `Slot` composition primitive:
 
@@ -40,7 +40,7 @@ numbers, portals, and multiple children are not slot targets. Fragment support
 is deferred unless the implementation can define meaningful prop/ref behavior
 for fragments.
 
-## Semantics to adopt for the first release
+## Semantics for the first release
 
 These are the settled React v1 profile of the universal composition contract.
 
@@ -108,11 +108,36 @@ contract:
 - If both slot and child provide refs, compose them so both receive the same
   underlying instance.
 - Support callback refs and object refs.
+- If the same ref identity is supplied by both composition layers, invoke or
+  assign it only once and clean it up only once.
 - Do not mutate or replace the original ref objects.
-- Ref cleanup behavior depends on the supported React version (see
-  [Supported React versions](#supported-react-versions)); R-04 cannot be
-  finalized until that decision is made.
+- Follow the React 19 callback-ref cleanup behavior described in
+  [Supported React versions](#supported-react-versions).
 - If only one ref exists, preserve it without unnecessary wrapping when feasible.
+- Nested slots compose all refs onto the same underlying target instance.
+
+### Custom component targets and forwarding
+
+A custom component target must forward the props contributed by `Slot` to the
+element or component it renders. In React 19, it must also pass an injected
+`ref` through when it intends that ref to identify the underlying rendered
+instance. `Slot` cannot force a custom component to forward props or refs that
+the component consumes or discards.
+
+For example:
+
+```tsx
+import type { ComponentProps } from "react";
+
+type LinkProps = ComponentProps<"a"> & { href: string };
+
+function Link({ href, ...props }: LinkProps) {
+  return <a href={href} {...props} />;
+}
+```
+
+The custom target remains responsible for forwarding the attributes and ref;
+`Slot` is responsible for composing them onto the `Link` element.
 
 ### Boolean and omitted props
 
@@ -166,38 +191,43 @@ them:
 
 Tests should assert observable outcomes, not implementation details.
 
-| ID    | Scenario                                                   | Expected outcome                                                   |
-| ----- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
-| P-01  | Slot provides prop absent from child                       | Slot prop appears on child                                         |
-| P-02  | Both provide same ordinary prop                            | Child value wins                                                   |
-| P-03  | Child explicitly sets prop to `false`                      | `false` wins                                                       |
-| P-04  | Child omits prop (key not present)                         | Slot value is forwarded                                            |
-| P-04a | Child explicitly sets prop to `undefined`                  | `undefined` wins; slot value is not forwarded                      |
-| P-05  | Child's own `children` conflict with slot children         | Child element's children are preserved                             |
-| E-01  | Slot and child handlers both exist                         | Child handler runs, then slot handler                              |
-| E-02  | Child handler calls `preventDefault()`                     | Slot handler still runs                                            |
-| E-03  | Only one handler exists                                    | That handler runs once                                             |
-| E-03a | Slot handler present, child handler absent                 | Slot handler is forwarded and runs once                            |
-| E-03b | Child handler present, slot handler absent                 | Child handler runs once                                            |
-| E-03c | Child handler explicitly `undefined`, slot handler present | Child `undefined` wins; slot handler does not run                  |
-| E-05  | Custom `on[A-Z]` callback on both sides                    | Both are composed (documents the heuristic)                        |
-| E-04  | Function-valued non-event prop on both sides               | Child value wins; functions are not composed                       |
-| C-01  | Both provide `className`                                   | Slot class then child class, separated by one space                |
-| C-02  | Only one provides `className`                              | Single value preserved                                             |
-| S-01  | Both provide style objects with distinct keys              | Both keys preserved                                                |
-| S-02  | Style key conflicts                                        | Child style wins                                                   |
-| S-03  | Style objects are merged                                   | Neither input object is mutated                                    |
-| R-01  | Slot and child callback refs                               | Both receive same instance                                         |
-| R-02  | Slot and child object refs                                 | Both `.current` values receive same instance                       |
-| R-03  | Callback/object ref combination                            | Both refs receive same instance                                    |
-| R-04  | Ref detachment/unmount                                     | Both refs are cleared/cleaned per the supported React version      |
-| R-05  | Callback ref returns a cleanup function (React 19 only)    | Cleanup runs for each ref on unmount                               |
-| R-06  | Callback ref returns nothing                               | Ref is called with `null` on unmount (behavior per chosen version) |
-| V-01  | No child                                                   | Stable descriptive error                                           |
-| V-02  | More than one child                                        | Stable descriptive error                                           |
-| V-03  | String or number child                                     | Stable descriptive error                                           |
-| V-04  | Fragment child                                             | Stable descriptive error                                           |
-| V-05  | Valid single element                                       | Slot substitution succeeds                                         |
+| ID    | Scenario                                                   | Expected outcome                                              |
+| ----- | ---------------------------------------------------------- | ------------------------------------------------------------- |
+| P-01  | Slot provides prop absent from child                       | Slot prop appears on child                                    |
+| P-02  | Both provide same ordinary prop                            | Child value wins                                              |
+| P-03  | Child explicitly sets prop to `false`                      | `false` wins                                                  |
+| P-04  | Child omits prop (key not present)                         | Slot value is forwarded                                       |
+| P-04a | Child explicitly sets prop to `undefined`                  | `undefined` wins; slot value is not forwarded                 |
+| P-05  | Child's own `children` conflict with slot children         | Child element's children are preserved                        |
+| E-01  | Slot and child handlers both exist                         | Child handler runs, then slot handler                         |
+| E-02  | Child handler calls `preventDefault()`                     | Slot handler still runs                                       |
+| E-03  | Only one handler exists                                    | That handler runs once                                        |
+| E-03a | Slot handler present, child handler absent                 | Slot handler is forwarded and runs once                       |
+| E-03b | Child handler present, slot handler absent                 | Child handler runs once                                       |
+| E-03c | Child handler explicitly `undefined`, slot handler present | Child `undefined` wins; slot handler does not run             |
+| E-05  | Custom `on[A-Z]` callback on both sides                    | Both are composed (documents the heuristic)                   |
+| E-04  | Function-valued non-event prop on both sides               | Child value wins; functions are not composed                  |
+| C-01  | Both provide `className`                                   | Slot class then child class, separated by one space           |
+| C-02  | Only one provides `className`                              | Single value preserved                                        |
+| S-01  | Both provide style objects with distinct keys              | Both keys preserved                                           |
+| S-02  | Style key conflicts                                        | Child style wins                                              |
+| S-03  | Style objects are merged                                   | Neither input object is mutated                               |
+| R-01  | Slot and child callback refs                               | Both receive same instance                                    |
+| R-02  | Slot and child object refs                                 | Both `.current` values receive same instance                  |
+| R-03  | Callback/object ref combination                            | Both refs receive same instance                               |
+| R-04  | Ref detachment/unmount                                     | Both refs are cleared/cleaned per the supported React version |
+| R-05  | Callback ref returns a cleanup function (React 19 only)    | Cleanup runs for each ref on unmount                          |
+| R-06  | Callback ref returns nothing                               | Ref is called with `null` on unmount                          |
+| R-07  | Parent rerenders with a new child element and stable refs  | Composed refs are not detached and reattached                 |
+| R-08  | Same callback ref supplied by slot and child               | Callback and cleanup each run once                            |
+| R-09  | Same object ref supplied by slot and child                 | Assignment and clearing each happen once                      |
+| N-05  | Three nested composition levels with callback refs         | All refs receive the target; each cleanup runs once           |
+| V-01  | No child                                                   | Stable descriptive error                                      |
+| V-02  | More than one child                                        | Stable descriptive error                                      |
+| V-03  | String or number child                                     | Stable descriptive error                                      |
+| V-04  | Fragment child                                             | Stable descriptive error                                      |
+| V-05  | Valid single element                                       | Slot substitution succeeds                                    |
+| T-01  | Custom target forwards contributed props and ref           | Rendered target receives both props and underlying instance   |
 
 ## TypeScript test plan
 

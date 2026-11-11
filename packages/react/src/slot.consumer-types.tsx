@@ -1,14 +1,14 @@
-import { createRef, type ReactNode } from "react";
+import { createRef } from "react";
+import type { ComponentProps } from "react";
 
 import { Slot } from "./index.js";
 
-type LinkProps = {
+type LinkProps = ComponentProps<"a"> & {
   href: string;
-  children?: ReactNode;
 };
 
-function Link({ href, children }: LinkProps) {
-  return <a href={href}>{children}</a>;
+function Link({ href, ...props }: LinkProps) {
+  return <a href={href} {...props} />;
 }
 
 /**
@@ -17,11 +17,15 @@ function Link({ href, children }: LinkProps) {
  */
 export function SlotConsumerTypes() {
   const anchorRef = createRef<HTMLAnchorElement>();
+  const forwardedRef = createRef<HTMLAnchorElement>();
 
   return (
     <>
       <Slot aria-label="profile link">
         <Link href="/profile">Profile</Link>
+      </Slot>
+      <Slot ref={forwardedRef} aria-label="forwarded profile link">
+        <Link href="/profile">Forwarded profile</Link>
       </Slot>
       <Slot ref={anchorRef} title="Documentation">
         <a href="/docs" ref={anchorRef}>
