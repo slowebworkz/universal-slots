@@ -5,7 +5,7 @@ import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Slot } from "./slot.js";
+import { Slot } from "./index.js";
 
 const slotError =
   "UniversalSlots Slot expects exactly one non-fragment React element child.";

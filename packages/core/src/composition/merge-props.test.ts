@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { mergeCompositionProps } from "./merge-props.js";
+import { mergeCompositionProps } from "../index.js";
 
 const isEventHandler = (name: string) => /^on[A-Z]/.test(name);
 
@@ -162,5 +162,95 @@ describe("mergeCompositionProps", () => {
         { isEventHandler },
       ),
     ).toThrow("Composition style values must be objects or nullish.");
+  });
+
+  it("preserves a source-only event handler", () => {
+    const sourceHandler = vi.fn();
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      {},
+      { isEventHandler },
+    );
+
+    expect(merged.onClick).toBe(sourceHandler);
+  });
+
+  it("preserves a target-only event handler", () => {
+    const targetHandler = vi.fn();
+    const merged = mergeCompositionProps(
+      {},
+      { onClick: targetHandler },
+      { isEventHandler },
+    );
+
+    expect(merged.onClick).toBe(targetHandler);
+  });
+
+  it("lets an explicitly undefined target event handler override the source", () => {
+    const sourceHandler = vi.fn();
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: undefined },
+      { isEventHandler },
+    );
+
+    expect(Object.hasOwn(merged, "onClick")).toBe(true);
+    expect(merged.onClick).toBeUndefined();
+  });
+
+  it("does not compose a non-function event value", () => {
+    const sourceHandler = vi.fn();
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: "not-a-handler" },
+      { isEventHandler },
+    );
+
+    expect(merged.onClick).toBe("not-a-handler");
+    expect(sourceHandler).not.toHaveBeenCalled();
+  });
+
+  it("omits empty and unsupported default class values", () => {
+    expect(
+      mergeCompositionProps(
+        { className: "  " },
+        { className: ["target"] },
+        { isEventHandler },
+      ).className,
+    ).toBeUndefined();
+  });
+
+  it("falls back to a source style when the target style is null", () => {
+    const sourceStyle = { color: "red" };
+
+    expect(
+      mergeCompositionProps(
+        { style: sourceStyle },
+        { style: null },
+        { isEventHandler },
+      ).style,
+    ).toBe(sourceStyle);
+  });
+
+  it("rejects array style values", () => {
+    expect(() =>
+      mergeCompositionProps(
+        { style: [{ color: "red" }] },
+        {},
+        { isEventHandler },
+      ),
+    ).toThrow("Composition style values must be objects or nullish.");
+  });
+
+  it("does not mutate the source or target prop objects", () => {
+    const sourceProps = { title: "source", style: { color: "red" } };
+    const targetProps = { title: "target", style: { margin: 2 } };
+    const sourceBefore = { ...sourceProps, style: { ...sourceProps.style } };
+    const targetBefore = { ...targetProps, style: { ...targetProps.style } };
+
+    mergeCompositionProps(sourceProps, targetProps, { isEventHandler });
+
+    expect(sourceProps).toEqual(sourceBefore);
+    expect(targetProps).toEqual(targetBefore);
   });
 });
