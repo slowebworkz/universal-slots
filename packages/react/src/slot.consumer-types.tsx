@@ -6,6 +6,7 @@ import type {
   ReactCompositionProps,
   ReactTargetProps,
   ReactTargetRef,
+  SlotCompositionOptions,
   SlotProps,
 } from "./index.js";
 
@@ -88,6 +89,25 @@ function acceptLinkSlotProps(props: SlotProps<typeof Link>) {
   void props;
 }
 
+const slotCompositionOptions: SlotCompositionOptions = {
+  mergeEvent:
+    (sourceHandler, targetHandler) =>
+    (...args: never[]) => {
+      targetHandler(...args);
+      sourceHandler(...args);
+    },
+};
+
+const validConfiguredSlotProps: SlotProps<typeof Link> = {
+  composition: slotCompositionOptions,
+  href: "/profile",
+};
+
+const invalidSlotCompositionOptions: SlotCompositionOptions = {
+  // @ts-expect-error event policy must be a function
+  mergeEvent: "not a policy",
+};
+
 // @ts-expect-error a Link target exposes an anchor ref, not a button ref
 acceptLinkSlotProps({ ref: createRef<HTMLButtonElement>() });
 
@@ -124,3 +144,5 @@ void anchorHref;
 void customLinkHref;
 void invalidAnchorProps;
 void inferredAnchorRef;
+void validConfiguredSlotProps;
+void invalidSlotCompositionOptions;

@@ -74,10 +74,41 @@ This follows the v1 target-wins precedence defined in the universal composition 
   handler in the initial behavior.
 - Do not compose function-valued props whose names do not match the pattern.
 
-The event-composition cancellation policy is a deliberate UniversalSlots
-decision; it should not be assumed to match every existing slot library. The
-core accepts an optional `mergeEvent` policy, but the React `Slot` adapter does
-not supply one and always uses the default behavior described above.
+The default event-composition behavior is a deliberate
+UniversalSlots decision; it should not be assumed to match every existing slot
+library. The React `Slot` adapter preserves that default, and exposes the
+framework-neutral core policy through its `composition.mergeEvent` option:
+
+```tsx
+<Slot
+  composition={{
+    mergeEvent:
+      (sourceHandler, targetHandler) =>
+      (...args: never[]) => {
+        const event = args[0] as { defaultPrevented?: boolean } | undefined;
+
+        targetHandler(...args);
+        if (!event?.defaultPrevented) {
+          sourceHandler(...args);
+        }
+      },
+  }}
+  onClick={parentHandler}
+>
+  <button onClick={childHandler}>Continue</button>
+</Slot>
+```
+
+Here the source handler is the Slot contribution and the target handler is the
+child contribution. The example therefore invokes the child first and invokes
+the parent only when the child has not prevented the event. The policy is
+framework-neutral: UniversalSlots does not import or require React's
+`SyntheticEvent` type. Consumers may annotate or narrow the event according to
+their own component contracts. The `composition` option is consumed by `Slot`
+and is not forwarded to the child element. The `composition` name is reserved
+for this Slot configuration: a Slot-level prop with that name cannot also be
+forwarded as an ordinary source prop. A `composition` prop already present on
+the target element remains part of the target's own props.
 
 ### `className`
 
