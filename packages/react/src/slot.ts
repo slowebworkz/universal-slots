@@ -1,15 +1,32 @@
 import { mergeCompositionProps } from "@universal-slots/core";
 import { cloneElement, Fragment, isValidElement, useMemo } from "react";
-import type { ReactElement, ReactNode, Ref, RefCallback } from "react";
+import type {
+  ElementType,
+  ReactElement,
+  ReactNode,
+  Ref,
+  RefCallback,
+} from "react";
+
+import type { ReactTargetRef } from "./types.js";
 
 type ComposableRef<T> =
   Ref<T> | ((instance: T | null) => void | (() => void)) | null | undefined;
 
-export type SlotProps = Record<string, unknown> & {
+/**
+ * Props accepted by the low-level Slot primitive.
+ *
+ * The source layer may contribute arbitrary props, so its runtime prop bag
+ * remains open. Supply the target element/component as the generic argument
+ * when a target-specific ref type is required, e.g. `Slot<"a">` or
+ * `Slot<typeof Link>`.
+ */
+export type SlotProps<Target extends ElementType = ElementType> = Record<
+  string,
+  unknown
+> & {
   children?: ReactNode;
-  // `any` keeps the ref assignable to whichever element the child renders.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ref?: ComposableRef<any>;
+  ref?: ReactTargetRef<Target>;
 };
 
 const slotError =
@@ -88,7 +105,11 @@ function composeRefs<T>(...refs: ComposableRef<T>[]): RefCallback<T> {
  * This is a low-level primitive. Component libraries can build APIs such as
  * `asChild` on top of it.
  */
-export function Slot({ children, ref: slotRef, ...slotProps }: SlotProps) {
+export function Slot<Target extends ElementType = ElementType>({
+  children,
+  ref: slotRef,
+  ...slotProps
+}: SlotProps<Target>) {
   // Hooks run before validation so the hook order never depends on a throw.
   // The composed ref is memoized so React does not detach and re-attach both
   // refs on every re-render.
@@ -99,8 +120,8 @@ export function Slot({ children, ref: slotRef, ...slotProps }: SlotProps) {
   const composedRef = useMemo(
     () =>
       slotRef != null && targetRef != null
-        ? composeRefs(slotRef, targetRef)
-        : slotRef,
+        ? composeRefs(slotRef as ComposableRef<unknown>, targetRef)
+        : (slotRef as ComposableRef<unknown>),
     [slotRef, targetRef],
   );
 
