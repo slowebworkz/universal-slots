@@ -83,6 +83,21 @@ export function mergeCompositionProps(
 
   const merged: CompositionProps = { ...sourceProps };
 
+  // Normalize source-only class props too. Without this pass, unsupported or
+  // empty source class values would bypass the default class policy whenever
+  // the target did not provide the corresponding prop.
+  for (const propName of ["class", "className"] as const) {
+    if (
+      Object.hasOwn(sourceProps, propName) &&
+      !Object.hasOwn(targetProps, propName)
+    ) {
+      merged[propName] = (options.mergeClass ?? mergeClassValues)(
+        sourceProps[propName],
+        undefined,
+      );
+    }
+  }
+
   for (const propName of Object.keys(targetProps)) {
     const sourceValue = sourceProps[propName];
     const targetValue = targetProps[propName];

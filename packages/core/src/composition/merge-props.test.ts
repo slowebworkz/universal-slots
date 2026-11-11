@@ -220,6 +220,21 @@ describe("mergeCompositionProps", () => {
     ).toBeUndefined();
   });
 
+  it("normalizes source-only class values with the default policy", () => {
+    expect(
+      mergeCompositionProps({ className: "  source  " }, {}, { isEventHandler })
+        .className,
+    ).toBe("source");
+
+    expect(
+      mergeCompositionProps(
+        { className: ["unsupported"] },
+        {},
+        { isEventHandler },
+      ).className,
+    ).toBeUndefined();
+  });
+
   it("falls back to a source style when the target style is null", () => {
     const sourceStyle = { color: "red" };
 
@@ -240,6 +255,26 @@ describe("mergeCompositionProps", () => {
         { isEventHandler },
       ),
     ).toThrow("Composition style values must be objects or nullish.");
+  });
+
+  it("rejects array style values contributed by the target", () => {
+    expect(() =>
+      mergeCompositionProps(
+        { style: { color: "red" } },
+        { style: [{ color: "blue" }] },
+        { isEventHandler },
+      ),
+    ).toThrow("Composition style values must be objects or nullish.");
+  });
+
+  it("preserves nullish style values when both layers are nullish", () => {
+    expect(
+      mergeCompositionProps(
+        { style: undefined },
+        { style: null },
+        { isEventHandler },
+      ).style,
+    ).toBeNull();
   });
 
   it("does not mutate the source or target prop objects", () => {
