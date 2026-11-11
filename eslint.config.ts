@@ -9,7 +9,24 @@ export default defineConfig(
   {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        { fixStyle: "separate-type-imports" },
+      ],
+      // Keep type imports/exports in their own statements, apart from value ones.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportSpecifier[importKind='type']",
+          message:
+            "Use a separate `import type { ... }` statement instead of an inline `type` specifier.",
+        },
+        {
+          selector: "ExportSpecifier[exportKind='type']",
+          message:
+            "Use a separate `export type { ... }` statement instead of an inline `type` specifier.",
+        },
+      ],
     },
   },
 );

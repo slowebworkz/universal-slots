@@ -1,7 +1,8 @@
 import { createRef } from "react";
-import type { ComponentPropsWithRef, MouseEvent } from "react";
 
 import { Slot } from "./index.js";
+
+import type { ComponentPropsWithRef, MouseEvent } from "react";
 import type {
   ReactCompositionProps,
   ReactTargetProps,
@@ -96,6 +97,11 @@ const slotCompositionOptions: SlotCompositionOptions = {
       targetHandler(...args);
       sourceHandler(...args);
     },
+  mergeClass: (source, target) => `${source ?? ""} ${target ?? ""}`.trim(),
+  mergeStyle: (source, target) => ({
+    ...(source as object | undefined),
+    ...(target as object | undefined),
+  }),
 };
 
 const validConfiguredSlotProps: SlotProps<typeof Link> = {
@@ -106,6 +112,16 @@ const validConfiguredSlotProps: SlotProps<typeof Link> = {
 const invalidSlotCompositionOptions: SlotCompositionOptions = {
   // @ts-expect-error event policy must be a function
   mergeEvent: "not a policy",
+};
+
+const invalidClassPolicy: SlotCompositionOptions = {
+  // @ts-expect-error class policy must be a function
+  mergeClass: true,
+};
+
+const invalidStylePolicy: SlotCompositionOptions = {
+  // @ts-expect-error style policy must be a function
+  mergeStyle: {},
 };
 
 // @ts-expect-error a Link target exposes an anchor ref, not a button ref
@@ -146,3 +162,5 @@ void invalidAnchorProps;
 void inferredAnchorRef;
 void validConfiguredSlotProps;
 void invalidSlotCompositionOptions;
+void invalidClassPolicy;
+void invalidStylePolicy;

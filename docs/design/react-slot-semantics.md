@@ -110,6 +110,31 @@ for this Slot configuration: a Slot-level prop with that name cannot also be
 forwarded as an ordinary source prop. A `composition` prop already present on
 the target element remains part of the target's own props.
 
+The same `composition` options object also exposes the core class and style
+value policies. These are useful when a React consumer uses non-string class
+representations or a style model that differs from plain object merging:
+
+```tsx
+<Slot
+  composition={{
+    mergeClass: (source, target) => cn(source, target),
+    mergeStyle: (source, target) => mergeFrameworkStyles(source, target),
+  }}
+  className="button"
+  style={{ color: "red" }}
+>
+  <button>Continue</button>
+</Slot>
+```
+
+The adapter forwards these callbacks to core; it does not implement a second
+class/style merge algorithm. The callbacks receive the source contribution
+first and the target contribution second. The default policies remain in
+place when an option is omitted. Both `mergeClass` and `mergeStyle` are also
+called for source-only values (with `undefined` as the target value) and for
+target-only values (with `undefined` as the source value), so a custom policy
+can normalize or transform either side.
+
 ### `className`
 
 - If both values are non-empty strings, concatenate in slot-then-child order,
@@ -215,7 +240,6 @@ them:
 - Fragment targets
 - Automatic class-name conflict resolution
 - Arbitrary function-prop composition
-- Configurable event-handler ordering
 - Configurable prop-precedence policies
 - Multiple child targets
 - Framework-neutral runtime abstractions beyond what the React adapter needs

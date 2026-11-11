@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import { StrictMode, createRef } from "react";
-import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Slot } from "./index.js";
+
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import type { SlotCompositionOptions } from "./index.js";
 
 const slotError =
@@ -283,7 +284,13 @@ describe("Slot conformance", () => {
       }
 
       render(
-        <Slot composition={{ mergeEvent: (source, target) => target }}>
+        <Slot
+          composition={{
+            mergeEvent: (source, target) => target,
+            mergeClass: (source, target) => target ?? source,
+            mergeStyle: (source, target) => target ?? source,
+          }}
+        >
           <CompositionTarget />
         </Slot>,
       );
@@ -484,6 +491,54 @@ describe("Slot conformance", () => {
 
       expect(screen.getByTestId("target").className).toBe("slot-class");
     });
+
+    it("uses a custom class policy supplied through composition", () => {
+      const mergeClass = vi.fn(
+        (source: unknown, target: unknown) => `${source}:${target}`,
+      );
+
+      render(
+        <Slot composition={{ mergeClass }} className="slot-class">
+          <button className="child-class" data-testid="target">
+            target
+          </button>
+        </Slot>,
+      );
+
+      expect(mergeClass).toHaveBeenCalledOnce();
+      expect(mergeClass).toHaveBeenCalledWith("slot-class", "child-class");
+      expect(screen.getByTestId("target").className).toBe(
+        "slot-class:child-class",
+      );
+    });
+
+    it("applies a custom class policy to source-only class values", () => {
+      const mergeClass = vi.fn((source: unknown) => String(source));
+
+      render(
+        <Slot composition={{ mergeClass }} className="slot-class">
+          <button data-testid="target">target</button>
+        </Slot>,
+      );
+
+      expect(mergeClass).toHaveBeenCalledWith("slot-class", undefined);
+      expect(screen.getByTestId("target").className).toBe("slot-class");
+    });
+
+    it("applies a custom class policy to target-only class values", () => {
+      const mergeClass = vi.fn((_source: unknown, target: unknown) => target);
+
+      render(
+        <Slot composition={{ mergeClass }}>
+          <button className="child-class" data-testid="target">
+            target
+          </button>
+        </Slot>,
+      );
+
+      expect(mergeClass).toHaveBeenCalledWith(undefined, "child-class");
+      expect(screen.getByTestId("target").className).toBe("child-class");
+    });
   });
 
   describe("style", () => {
@@ -531,6 +586,63 @@ describe("Slot conformance", () => {
 
       expect(slotStyle).toEqual(slotBefore);
       expect(childStyle).toEqual(childBefore);
+    });
+
+    it("uses a custom style policy supplied through composition", () => {
+      const slotStyle = { color: "red" };
+      const childStyle = { color: "blue" };
+      const mergeStyle = vi.fn(() => ({ color: "purple" }));
+
+      render(
+        <Slot composition={{ mergeStyle }} style={slotStyle}>
+          <button data-testid="target" style={childStyle}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      expect(mergeStyle).toHaveBeenCalledOnce();
+      expect(mergeStyle).toHaveBeenCalledWith(slotStyle, childStyle);
+      expect(
+        (screen.getByTestId("target") as HTMLButtonElement).style.color,
+      ).toBe("purple");
+    });
+
+    it("applies a custom style policy to target-only style values", () => {
+      const childStyle = { color: "blue" };
+      const mergeStyle = vi.fn((_source: unknown, target: unknown) => target);
+
+      render(
+        <Slot composition={{ mergeStyle }}>
+          <button data-testid="target" style={childStyle}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      expect(mergeStyle).toHaveBeenCalledWith(undefined, childStyle);
+      expect(
+        (screen.getByTestId("target") as HTMLButtonElement).style.color,
+      ).toBe("blue");
+    });
+
+    it("passes source-only style values through the merge policy", () => {
+      const slotStyle = { color: "red" };
+      const mergeStyle = vi.fn((source: unknown) => ({
+        ...(source as object),
+        fontWeight: "bold",
+      }));
+
+      render(
+        <Slot composition={{ mergeStyle }} style={slotStyle}>
+          <button data-testid="target">target</button>
+        </Slot>,
+      );
+
+      expect(mergeStyle).toHaveBeenCalledExactlyOnceWith(slotStyle, undefined);
+      const target = screen.getByTestId("target") as HTMLButtonElement;
+      expect(target.style.color).toBe("red");
+      expect(target.style.fontWeight).toBe("bold");
     });
   });
 

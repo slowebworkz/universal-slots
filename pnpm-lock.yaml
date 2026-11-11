@@ -230,6 +230,9 @@ catalogs:
     react-dom:
       specifier: ^19.0.0
       version: 19.3.1
+    remeda:
+      specifier: ^2.59.0
+      version: 2.59.0
     type-fest:
       specifier: ^5.10.0
       version: 5.10.0
@@ -289,6 +292,9 @@ importers:
       '@universal-slots/core':
         specifier: workspace:*
         version: link:../core
+      remeda:
+        specifier: 'catalog:'
+        version: 2.59.0
     devDependencies:
       '@testing-library/react':
         specifier: 'catalog:'
@@ -1248,6 +1254,10 @@ packages:
   react@19.3.1:
     resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
     engines: {node: '>=0.10.0'}
+
+  remeda@2.59.0:
+    resolution: {integrity: sha512-iDQVjRfBXmsSjU6MQILkPdRtLjUqmMLeOQP8T1/jzZSwkCeALDKIKUYpMR2DuOYlNs+DTR8GiXsl/r4+eDCObw==}
+    engines: {node: '>=18.0.0'}
 
   rollup@4.68.0:
     resolution: {integrity: sha512-BIHWnc1Qjdy+WLfOdcSd67sxO4iW6pTnhdZosg+7ywSaiMWxxzKldkkNpUJqeXYAiJzyB14P2cIjqC6tlb6xzw==}
@@ -2297,6 +2307,8 @@ snapshots:
   react-is@17.0.2: {}
 
   react@19.3.1: {}
+
+  remeda@2.59.0: {}
 
   rollup@4.68.0:
     dependencies:
