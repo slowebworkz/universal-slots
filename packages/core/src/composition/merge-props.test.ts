@@ -126,6 +126,48 @@ describe("mergeCompositionProps", () => {
     expect(sourceHandler).not.toHaveBeenCalled();
   });
 
+  it("applies custom event policies to handlers in union-shaped prop types", () => {
+    type SourceProps =
+      | { kind: "activate"; onActivate: (value: string) => void }
+      | { kind: "focus"; onFocus: (value: string) => void };
+    type TargetProps =
+      | { kind: "activate"; onActivate: (value: string) => void }
+      | { kind: "focus"; onFocus: (value: string) => void };
+
+    const sourceHandler = vi.fn();
+    const targetHandler = vi.fn();
+    const mergeEvent = vi.fn(
+      (
+        source: (...args: never[]) => unknown,
+        target: (...args: never[]) => unknown,
+      ) =>
+        (...args: unknown[]) => {
+          (target as (...values: unknown[]) => unknown)(...args);
+          (source as (...values: unknown[]) => unknown)(...args);
+        },
+    );
+    const sourceProps: SourceProps = {
+      kind: "activate",
+      onActivate: sourceHandler,
+    };
+    const targetProps: TargetProps = {
+      kind: "activate",
+      onActivate: targetHandler,
+    };
+
+    const merged = mergeCompositionProps(sourceProps, targetProps, {
+      isEventHandler,
+      mergeEvent,
+    });
+
+    (merged.onActivate as () => void)();
+
+    expect(mergeEvent).toHaveBeenCalledOnce();
+    expect(targetHandler).toHaveBeenCalledOnce();
+    expect(sourceHandler).toHaveBeenCalledOnce();
+    expect(merged.kind).toBe("activate");
+  });
+
   it("does not let preventDefault suppress the source handler", () => {
     const sourceHandler = vi.fn();
     const targetHandler = vi.fn((event: { preventDefault(): void }) => {
