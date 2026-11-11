@@ -1,0 +1,20 @@
+{
+  "name": "@universal-slots/core",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Framework-neutral polymorphic composition policies for UniversalSlots.",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,3 +1,4 @@
+import { mergeCompositionProps } from "@universal-slots/core";
 import { cloneElement, Fragment, isValidElement, useMemo } from "react";
 import type { ReactElement, ReactNode, Ref, RefCallback } from "react";
 
@@ -16,41 +17,6 @@ const slotError =
 
 function isEventHandler(name: string): boolean {
   return /^on[A-Z]/.test(name);
-}
-
-function mergeClassNames(slotClass: unknown, targetClass: unknown): unknown {
-  const slotValue =
-    typeof slotClass === "string" && slotClass.trim() !== ""
-      ? slotClass.trim()
-      : undefined;
-  const targetValue =
-    typeof targetClass === "string" && targetClass.trim() !== ""
-      ? targetClass.trim()
-      : undefined;
-
-  if (slotValue && targetValue) {
-    return `${slotValue} ${targetValue}`;
-  }
-
-  return targetValue ?? slotValue;
-}
-
-function isStyleObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function assertStyle(value: unknown): void {
-  if (value != null && !isStyleObject(value)) {
-    throw new TypeError("UniversalSlots Slot expects style objects.");
-  }
-}
-
-// Callers must have validated both values with assertStyle.
-function mergeStyles(slotStyle: unknown, targetStyle: unknown): unknown {
-  if (slotStyle == null) return targetStyle;
-  if (targetStyle == null) return slotStyle;
-
-  return { ...(slotStyle as object), ...(targetStyle as object) };
 }
 
 // Maps each composed callback to the original refs it applies, so nested
@@ -143,41 +109,9 @@ export function Slot({ children, ref: slotRef, ...slotProps }: SlotProps) {
   }
 
   const target = children as ReactElement<Record<string, unknown>>;
-  const targetProps = target.props;
-  const mergedProps: Record<string, unknown> = { ...slotProps };
-
-  assertStyle(slotProps.style);
-  assertStyle(targetProps.style);
-
-  for (const propName of Object.keys(targetProps)) {
-    const targetValue = targetProps[propName];
-    const slotValue = slotProps[propName];
-
-    if (propName === "className") {
-      mergedProps.className = mergeClassNames(slotValue, targetValue);
-      continue;
-    }
-
-    if (propName === "style") {
-      mergedProps.style = mergeStyles(slotValue, targetValue);
-      continue;
-    }
-
-    if (
-      isEventHandler(propName) &&
-      typeof targetValue === "function" &&
-      typeof slotValue === "function"
-    ) {
-      mergedProps[propName] = (...args: unknown[]) => {
-        targetValue(...args);
-        slotValue(...args);
-      };
-      continue;
-    }
-
-    // Explicit target values, including undefined, take precedence.
-    mergedProps[propName] = targetValue;
-  }
+  const mergedProps = mergeCompositionProps(slotProps, target.props, {
+    isEventHandler,
+  });
 
   if (composedRef != null) {
     mergedProps.ref = composedRef;

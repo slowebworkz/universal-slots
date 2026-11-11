@@ -2,7 +2,7 @@
 
 Universal slot composition technology for modern UI frameworks.
 
-UniversalSlots aims to define a framework-neutral composition contract and provide framework adapters that implement it without pretending that every framework has identical slot or projection semantics.
+UniversalSlots defines framework-neutral composition policies and provides framework adapters that implement them without pretending that every framework has identical slot or projection semantics.
 
 > **Status:** Experimental React 19 adapter in development. Public APIs and behavior are not yet stable.
 
@@ -25,6 +25,17 @@ pnpm lint
 pnpm test
 pnpm typecheck
 ```
+
+## Shared core
+
+`@universal-slots/core` contains framework-neutral prop composition policies.
+Framework adapters use it for ordinary prop precedence, event composition,
+class concatenation, and style merging. Adapters retain responsibility for
+framework-specific target manipulation, event recognition, refs, and lifecycle.
+
+The core package has no dependency on Praxis-kit or any UI framework. Praxis-kit
+and other component libraries can consume UniversalSlots and adapt their own
+higher-level component contracts to these primitives.
 
 ## React adapter
 

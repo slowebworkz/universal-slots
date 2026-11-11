@@ -128,6 +128,40 @@ The specification should distinguish the **runtime contract** from each framewor
 
 Type-level tests should verify public consumer behavior rather than internal helper types.
 
+## Shared runtime policy engine
+
+The initial framework-neutral runtime policy implementation lives in the
+`@universal-slots/core` package. Framework adapters delegate common prop
+composition to this package and supply their own event-handler recognition
+convention. Adapters remain responsible for native element/VNode/template
+manipulation, target validation, refs, and lifecycle behavior.
+
+The core policy engine currently defines:
+
+- Target props win for ordinary properties, including explicitly present
+  `undefined` values.
+- Recognized target and source event handlers run target-first, then source;
+  an identical function reference is invoked once, and `preventDefault()` does
+  not suppress the source handler.
+- `class` and `className` string values concatenate source-first, target-last;
+  empty or unsupported values are omitted by the core string policy.
+- Style objects are shallow-merged, with target values winning; nullish values
+  fall back to the non-nullish value.
+- Non-object, non-nullish style values are rejected by the default policy.
+- Adapters may override class/style _value handling_ for framework-native
+  representations, but must preserve the contract's merge order and precedence.
+
+These are UniversalSlots semantics, not an attempt to copy every existing
+consumer's policy. In particular, the current Praxis implementation suppresses
+the composing handler when the target event is default-prevented and has its own
+class/style normalization behavior. Praxis integration must explicitly adapt those differences rather
+than changing the shared contract implicitly.
+
+`@universal-slots/core` has no framework or Praxis dependency. Framework
+adapters may depend on it; Praxis and other component libraries may depend on
+UniversalSlots packages, but UniversalSlots must never import their types or
+runtime code.
+
 ## Framework adapter model
 
 The contract is framework-independent in intent, not in implementation. Adapters may use different native mechanisms and may expose capability differences.
