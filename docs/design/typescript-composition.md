@@ -130,3 +130,26 @@ source style value remains possible when that key is absent; a present target
 value takes precedence. Style arrays and function values are not recursively
 merged by the core type projection. Framework adapters remain responsible for
 constraining their accepted style model and matching their runtime policy.
+
+## Consumer composition example
+
+A component library can define its own composed prop contract without making
+its component types dependencies of UniversalSlots:
+
+```tsx
+import type { ComponentPropsWithoutRef } from "react";
+import type { ReactCompositionProps } from "@universal-slots/react";
+
+type ButtonSourceProps = {
+  variant: "primary" | "secondary";
+  size: "small" | "medium" | "large";
+  className?: string;
+};
+
+type LinkProps = ComponentPropsWithoutRef<"a"> & { href: string };
+type ButtonAsLinkProps = ReactCompositionProps<ButtonSourceProps, LinkProps>;
+```
+
+The source component contributes its design-system props, while the target
+contributes its destination-specific props. The consumer owns the final public
+component signature and any additional constraints on combinations.

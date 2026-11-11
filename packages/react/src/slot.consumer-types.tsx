@@ -30,6 +30,33 @@ type TargetProps = {
   variant: "primary";
 };
 
+type ButtonSourceProps = {
+  variant: "primary" | "secondary";
+  size: "small" | "medium" | "large";
+  className?: string;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+};
+
+type ButtonAsLinkProps = ReactCompositionProps<
+  ButtonSourceProps,
+  ReactTargetProps<typeof Link>
+>;
+
+const validButtonAsLink: ButtonAsLinkProps = {
+  variant: "primary",
+  size: "medium",
+  href: "/profile",
+  className: "button link",
+  onClick: (event) => event.currentTarget.href,
+};
+
+const invalidButtonAsLinkHref: ButtonAsLinkProps = {
+  variant: "secondary",
+  size: "large",
+  // @ts-expect-error target-specific href remains a string
+  href: 42,
+};
+
 type ComposedProps = ReactCompositionProps<SourceProps, TargetProps>;
 
 const validComposedProps: ComposedProps = {
@@ -89,6 +116,8 @@ export function SlotConsumerTypes() {
 
 // Keep these values referenced so no-unused-vars checks retain the assertions.
 void validComposedProps;
+void validButtonAsLink;
+void invalidButtonAsLinkHref;
 void invalidVariant;
 void invalidHref;
 void anchorHref;
