@@ -15,6 +15,7 @@ catalog:
   jsdom: ^31.0.0
   react: ^19.0.0
   react-dom: ^19.0.0
+  type-fest: ^5.10.0
   typescript-eslint: ^8.72.2
   vitest: ^5.1.0
   # Held on the 6.x line. TS 7 breaks `turbo lint`/`typecheck` because typescript-eslint

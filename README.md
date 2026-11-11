@@ -61,6 +61,29 @@ Custom component targets must forward contributed props and the injected ref to
 the element they render. `Slot` cannot forward through a component that consumes
 or discards those values.
 
+For target-specific ref typing, supply the target as the `Slot` generic:
+
+```tsx
+<Slot<"a"> ref={anchorRef} aria-label="Profile">
+  <a href="/profile">Profile</a>
+</Slot>
+
+<Slot<typeof Link> ref={anchorRef} aria-label="Profile">
+  <Link href="/profile">Profile</Link>
+</Slot>
+```
+
+The `Slot` generic is an explicit target type supplied by the caller; it is
+not inferred or verified against the JSX child. This is necessary because
+ordinary JSX element types do not reliably preserve the concrete target
+component information required for ref extraction.
+
+The React package also exports `ReactTargetProps`, `ReactTargetRef`, and
+`ReactCompositionProps`. These utilities let component libraries build their
+own typed composition APIs without introducing consumer-specific dependencies
+into UniversalSlots. See
+[the TypeScript composition design](./docs/design/typescript-composition.md).
+
 See [ROADMAP.md](./ROADMAP.md) for the project plan and
 [polymorphic composition semantics](./docs/design/polymorphic-composition.md)
 for the composition contract.
