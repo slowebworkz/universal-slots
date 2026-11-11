@@ -1,15 +1,13 @@
-import type { KeysOfUnion } from "type-fest";
+import type { KeysOfUnion, OptionalKeysOf, RequiredKeysOf } from "type-fest";
 
 /** All keys across every member of a union. */
 export type AllKeys<T> = KeysOfUnion<T>;
 
 /** Keys whose values may be omitted from an object. */
-export type OptionalKeys<T extends object> = {
-  [Key in keyof T]-?: Record<never, never> extends Pick<T, Key> ? Key : never;
-}[keyof T];
+export type OptionalKeys<T extends object> = OptionalKeysOf<T>;
 
 /** Keys that must be present on an object. */
-export type RequiredKeys<T extends object> = Exclude<keyof T, OptionalKeys<T>>;
+export type RequiredKeys<T extends object> = RequiredKeysOf<T>;
 
 /**
  * The value a property can have when it is present.

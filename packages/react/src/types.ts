@@ -23,9 +23,15 @@ export type ReactTargetRef<Target extends ElementType> = Target extends unknown
     : never
   : never;
 
-type ReactEventKeys<Props> = {
-  [Key in keyof Props]-?: Key extends `on${Capitalize<string>}` ? Key : never;
-}[keyof Props];
+/** React's event-handler prop naming convention: `on` followed by a capital. */
+export type ReactEventKey = `on${Capitalize<string>}`;
+
+/** Event-handler keys across every member of a props union. */
+type ReactEventKeys<Props> = Props extends unknown
+  ? {
+      [Key in keyof Props]-?: Key extends ReactEventKey ? Key : never;
+    }[keyof Props]
+  : never;
 
 /** Composition result with React's `on[A-Z]` event-handler convention. */
 export type ReactCompositionProps<
@@ -34,8 +40,5 @@ export type ReactCompositionProps<
 > = MergeCompositionProps<
   SourceProps,
   TargetProps,
-  Extract<
-    ReactEventKeys<SourceProps> | ReactEventKeys<TargetProps>,
-    keyof SourceProps | keyof TargetProps
-  >
+  ReactEventKeys<SourceProps> | ReactEventKeys<TargetProps>
 >;
