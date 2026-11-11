@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { createRef } from "react";
+import { StrictMode, createRef } from "react";
 import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -419,6 +419,85 @@ describe("Slot conformance", () => {
       expect(childRef).toHaveBeenCalledTimes(1);
       expect(slotRef).not.toHaveBeenCalledWith(null);
       expect(childRef).not.toHaveBeenCalledWith(null);
+    });
+
+    it("R-12 cleans up replaced callback refs before attaching their replacements", () => {
+      const oldSlotCleanup = vi.fn();
+      const oldChildCleanup = vi.fn();
+      const nextSlotCleanup = vi.fn();
+      const nextChildCleanup = vi.fn();
+      const oldSlotRef = vi.fn(() => oldSlotCleanup);
+      const oldChildRef = vi.fn(() => oldChildCleanup);
+      const nextSlotRef = vi.fn(() => nextSlotCleanup);
+      const nextChildRef = vi.fn(() => nextChildCleanup);
+
+      const { rerender, unmount } = render(
+        <Slot ref={oldSlotRef}>
+          <button ref={oldChildRef} data-testid="target">
+            first
+          </button>
+        </Slot>,
+      );
+
+      const target = screen.getByTestId("target");
+
+      expect(oldSlotRef).toHaveBeenCalledOnce();
+      expect(oldChildRef).toHaveBeenCalledOnce();
+
+      rerender(
+        <Slot ref={nextSlotRef}>
+          <button ref={nextChildRef} data-testid="target">
+            second
+          </button>
+        </Slot>,
+      );
+
+      expect(oldSlotCleanup).toHaveBeenCalledOnce();
+      expect(oldChildCleanup).toHaveBeenCalledOnce();
+      expect(nextSlotRef).toHaveBeenCalledOnce();
+      expect(nextChildRef).toHaveBeenCalledOnce();
+      expect(nextSlotRef).toHaveBeenCalledWith(target);
+      expect(nextChildRef).toHaveBeenCalledWith(target);
+
+      // Replaced refs are cleaned up before their replacements attach.
+      const callOrder = (mock: { mock: { invocationCallOrder: number[] } }) =>
+        mock.mock.invocationCallOrder[0] ?? Number.NaN;
+
+      expect(callOrder(oldSlotCleanup)).toBeLessThan(callOrder(nextSlotRef));
+      expect(callOrder(oldChildCleanup)).toBeLessThan(callOrder(nextChildRef));
+
+      unmount();
+
+      expect(nextSlotCleanup).toHaveBeenCalledOnce();
+      expect(nextChildCleanup).toHaveBeenCalledOnce();
+    });
+
+    it("R-13 supports callback-ref setup and cleanup under StrictMode", () => {
+      const slotCleanup = vi.fn();
+      const childCleanup = vi.fn();
+      const slotRef = vi.fn(() => slotCleanup);
+      const childRef = vi.fn(() => childCleanup);
+
+      const view = render(
+        <StrictMode>
+          <Slot ref={slotRef}>
+            <button ref={childRef} data-testid="target">
+              target
+            </button>
+          </Slot>
+        </StrictMode>,
+      );
+
+      // StrictMode performs an additional development setup/cleanup cycle.
+      expect(slotRef).toHaveBeenCalledTimes(2);
+      expect(childRef).toHaveBeenCalledTimes(2);
+      expect(slotCleanup).toHaveBeenCalledOnce();
+      expect(childCleanup).toHaveBeenCalledOnce();
+
+      view.unmount();
+
+      expect(slotCleanup).toHaveBeenCalledTimes(2);
+      expect(childCleanup).toHaveBeenCalledTimes(2);
     });
 
     it("R-08 invokes an identical callback ref only once and cleans it up once", () => {
