@@ -23,6 +23,7 @@
     "react-dom": "catalog:"
   },
   "dependencies": {
-    "@universal-slots/core": "workspace:*"
+    "@universal-slots/core": "workspace:*",
+    "remeda": "catalog:"
   }
 }

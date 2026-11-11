@@ -101,26 +101,26 @@ export function mergeCompositionProps(
   targetProps: CompositionProps,
   options: MergeCompositionPropsOptions,
 ): CompositionProps {
-  // Validate source style even when the target does not provide a style prop,
-  // unless the adapter supplied its own style-value policy.
-  if (options.mergeStyle == null) {
-    assertStyleObject(sourceProps.style);
-  }
-
   const merged: CompositionProps = { ...sourceProps };
 
-  // Normalize source-only class props too. Without this pass, unsupported or
-  // empty source class values would bypass the default class policy whenever
-  // the target did not provide the corresponding prop.
-  for (const propName of ["class", "className"] as const) {
+  // Run source-only class and style props through their policies too, with
+  // `undefined` as the target value. Without this pass, unsupported or empty
+  // source values would bypass the class and style policies (default or custom)
+  // whenever the target did not provide the corresponding prop.
+  const mergeClass = options.mergeClass ?? mergeClassValues;
+  const mergeStyle = options.mergeStyle ?? mergeStyleObjects;
+  const sourceOnlyPolicies: readonly [string, MergeValuePolicy][] = [
+    ["class", mergeClass],
+    ["className", mergeClass],
+    ["style", mergeStyle],
+  ];
+
+  for (const [propName, policy] of sourceOnlyPolicies) {
     if (
       Object.hasOwn(sourceProps, propName) &&
       !Object.hasOwn(targetProps, propName)
     ) {
-      merged[propName] = (options.mergeClass ?? mergeClassValues)(
-        sourceProps[propName],
-        undefined,
-      );
+      merged[propName] = policy(sourceProps[propName], undefined);
     }
   }
 
@@ -129,18 +129,12 @@ export function mergeCompositionProps(
     const targetValue = targetProps[propName];
 
     if (propName === "class" || propName === "className") {
-      merged[propName] = (options.mergeClass ?? mergeClassValues)(
-        sourceValue,
-        targetValue,
-      );
+      merged[propName] = mergeClass(sourceValue, targetValue);
       continue;
     }
 
     if (propName === "style") {
-      merged.style = (options.mergeStyle ?? mergeStyleObjects)(
-        sourceValue,
-        targetValue,
-      );
+      merged.style = mergeStyle(sourceValue, targetValue);
       continue;
     }
 

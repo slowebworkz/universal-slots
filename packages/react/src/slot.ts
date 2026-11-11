@@ -1,8 +1,8 @@
-import {
-  mergeCompositionProps,
-  type MergeEventPolicy,
-} from "@universal-slots/core";
+import { mergeCompositionProps } from "@universal-slots/core";
+import { isNonNullish, isNullish } from "remeda";
 import { cloneElement, Fragment, isValidElement, useMemo } from "react";
+
+import type { MergeEventPolicy, MergeValuePolicy } from "@universal-slots/core";
 import type {
   ElementType,
   ReactElement,
@@ -20,6 +20,10 @@ type ComposableRef<T> =
 export interface SlotCompositionOptions {
   /** Override how distinct recognized event handlers are composed. */
   mergeEvent?: MergeEventPolicy;
+  /** Override class/className value handling for framework-specific values. */
+  mergeClass?: MergeValuePolicy;
+  /** Override style value handling for framework-specific style models. */
+  mergeStyle?: MergeValuePolicy;
 }
 
 /**
@@ -52,7 +56,7 @@ const composedSources = new WeakMap<object, readonly ComposableRef<never>[]>();
 
 function flattenRefs<T>(refs: ComposableRef<T>[]): ComposableRef<T>[] {
   return refs.flatMap((ref) =>
-    ref != null && typeof ref === "function" && composedSources.has(ref)
+    isNonNullish(ref) && typeof ref === "function" && composedSources.has(ref)
       ? (composedSources.get(ref) as ComposableRef<T>[])
       : [ref],
   );
@@ -67,7 +71,7 @@ function composeRefs<T>(...refs: ComposableRef<T>[]): RefCallback<T> {
     const cleanups: (() => void)[] = [];
 
     for (const ref of uniqueRefs) {
-      if (ref == null) continue;
+      if (isNullish(ref)) continue;
 
       if (typeof ref === "function") {
         const cleanup = ref(instance);
@@ -130,7 +134,7 @@ export function Slot<Target extends ElementType = ElementType>({
     : undefined;
   const composedRef = useMemo(
     () =>
-      slotRef != null && targetRef != null
+      isNonNullish(slotRef) && isNonNullish(targetRef)
         ? composeRefs(slotRef as ComposableRef<unknown>, targetRef)
         : (slotRef as ComposableRef<unknown>),
     [slotRef, targetRef],
@@ -145,12 +149,18 @@ export function Slot<Target extends ElementType = ElementType>({
     isEventHandler,
     // Pick known options explicitly so untyped input cannot override
     // event classification or other core options.
-    ...(composition?.mergeEvent != null && {
+    ...(isNonNullish(composition?.mergeEvent) && {
       mergeEvent: composition.mergeEvent,
+    }),
+    ...(isNonNullish(composition?.mergeClass) && {
+      mergeClass: composition.mergeClass,
+    }),
+    ...(isNonNullish(composition?.mergeStyle) && {
+      mergeStyle: composition.mergeStyle,
     }),
   });
 
-  if (composedRef != null) {
+  if (isNonNullish(composedRef)) {
     mergedProps.ref = composedRef;
   }
 

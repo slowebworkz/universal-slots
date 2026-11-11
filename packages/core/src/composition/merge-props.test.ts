@@ -249,6 +249,22 @@ describe("mergeCompositionProps", () => {
     expect(merged.style).toBe("color: red; color: blue");
   });
 
+  it("passes source-only style values through a custom style policy", () => {
+    const mergeStyle = vi.fn((source: unknown, target: unknown) => [
+      source,
+      target,
+    ]);
+
+    expect(
+      mergeCompositionProps(
+        { style: "color: red" },
+        {},
+        { isEventHandler, mergeStyle },
+      ).style,
+    ).toEqual(["color: red", undefined]);
+    expect(mergeStyle).toHaveBeenCalledOnce();
+  });
+
   it("falls back to the non-nullish style value", () => {
     expect(
       mergeCompositionProps(
@@ -375,6 +391,12 @@ describe("mergeCompositionProps", () => {
         { style: [{ color: "blue" }] },
         { isEventHandler },
       ),
+    ).toThrow("Composition style values must be objects or nullish.");
+  });
+
+  it("rejects function style values", () => {
+    expect(() =>
+      mergeCompositionProps({ style: () => undefined }, {}, { isEventHandler }),
     ).toThrow("Composition style values must be objects or nullish.");
   });
 
