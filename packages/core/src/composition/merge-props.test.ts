@@ -57,6 +57,75 @@ describe("mergeCompositionProps", () => {
     expect(handler).toHaveBeenCalledOnce();
   });
 
+  it("does not call a custom policy for identical handler references", () => {
+    const handler = vi.fn();
+    const mergeEvent = vi.fn(() => vi.fn());
+    const merged = mergeCompositionProps(
+      { onClick: handler },
+      { onClick: handler },
+      { isEventHandler, mergeEvent },
+    );
+
+    expect(merged.onClick).toBe(handler);
+    expect(mergeEvent).not.toHaveBeenCalled();
+  });
+
+  it("allows an adapter to compose event handlers source-first", () => {
+    const order: string[] = [];
+    const sourceHandler = vi.fn(() => order.push("source"));
+    const targetHandler = vi.fn(() => order.push("target"));
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: targetHandler },
+      {
+        isEventHandler,
+        mergeEvent:
+          (source, target) =>
+          (...args: unknown[]) => {
+            (source as (...values: unknown[]) => void)(...args);
+            (target as (...values: unknown[]) => void)(...args);
+          },
+      },
+    );
+
+    (merged.onClick as () => void)();
+
+    expect(order).toEqual(["source", "target"]);
+  });
+
+  it("allows an adapter to suppress the source handler after cancellation", () => {
+    const sourceHandler = vi.fn();
+    const targetHandler = vi.fn(
+      (event: { defaultPrevented: boolean; preventDefault(): void }) =>
+        event.preventDefault(),
+    );
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: targetHandler },
+      {
+        isEventHandler,
+        mergeEvent:
+          (source, target) => (event: { defaultPrevented: boolean }) => {
+            (target as (value: typeof event) => void)(event);
+            if (!event.defaultPrevented) {
+              (source as (value: typeof event) => void)(event);
+            }
+          },
+      },
+    );
+    const event = {
+      defaultPrevented: false,
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+    };
+
+    (merged.onClick as (value: typeof event) => void)(event);
+
+    expect(targetHandler).toHaveBeenCalledOnce();
+    expect(sourceHandler).not.toHaveBeenCalled();
+  });
+
   it("does not let preventDefault suppress the source handler", () => {
     const sourceHandler = vi.fn();
     const targetHandler = vi.fn((event: { preventDefault(): void }) => {

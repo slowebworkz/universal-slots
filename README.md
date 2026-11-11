@@ -31,7 +31,8 @@ pnpm typecheck
 `@universal-slots/core` contains framework-neutral prop composition policies.
 Framework adapters use it for ordinary prop precedence, event composition,
 class concatenation, and style merging. Adapters retain responsibility for
-framework-specific target manipulation, event recognition, refs, and lifecycle.
+framework-specific target manipulation, event recognition, event-composition
+policy, refs, and lifecycle.
 
 The core package has no dependency on Praxis-kit or any UI framework. Praxis-kit
 and other component libraries can consume UniversalSlots and adapt their own

@@ -13,6 +13,21 @@ export type MergeValuePolicy = (
   targetValue: unknown,
 ) => unknown;
 
+/**
+ * Composes two distinct event-handler functions into one. Invoked only when the
+ * source and target values are both functions and are not the same reference.
+ */
+export type EventHandlerValue = (...args: never[]) => unknown;
+
+export type MergeEventPolicy = (
+  sourceHandler: EventHandlerValue,
+  targetHandler: EventHandlerValue,
+) => unknown;
+
+function isEventHandlerValue(value: unknown): value is EventHandlerValue {
+  return typeof value === "function";
+}
+
 export interface MergeCompositionPropsOptions {
   /** The adapter's convention for identifying event-handler properties. */
   isEventHandler: EventHandlerClassifier;
@@ -20,6 +35,8 @@ export interface MergeCompositionPropsOptions {
   mergeClass?: MergeValuePolicy;
   /** Override style value handling when the framework has a different style model. */
   mergeStyle?: MergeValuePolicy;
+  /** Override how two distinct event-handler functions are composed. */
+  mergeEvent?: MergeEventPolicy;
 }
 
 function mergeClassValues(sourceValue: unknown, targetValue: unknown): unknown {
@@ -62,13 +79,22 @@ function mergeStyleObjects(
   return { ...sourceValue, ...targetValue };
 }
 
+/** Compose target first, then source, without framework-specific event semantics. */
+const mergeEventHandlers: MergeEventPolicy =
+  (sourceHandler, targetHandler) =>
+  (...args: unknown[]) => {
+    (targetHandler as (...values: unknown[]) => unknown)(...args);
+    (sourceHandler as (...values: unknown[]) => unknown)(...args);
+  };
+
 /**
  * Merge composition contributions into a target's props.
  *
  * Ordinary target props win, including explicitly present `undefined` values.
- * Event handlers are composed target-first, then source. Cancellation does not
- * suppress the source handler. Class values concatenate and style objects are
- * shallow-merged, with target values taking precedence.
+ * Event handlers are composed target-first, then source by default. An adapter
+ * may provide `mergeEvent` to supply a different framework-neutral policy.
+ * Class values concatenate and style objects are shallow-merged, with target
+ * values taking precedence.
  */
 export function mergeCompositionProps(
   sourceProps: CompositionProps,
@@ -120,17 +146,17 @@ export function mergeCompositionProps(
 
     if (
       options.isEventHandler(propName) &&
-      typeof sourceValue === "function" &&
-      typeof targetValue === "function"
+      isEventHandlerValue(sourceValue) &&
+      isEventHandlerValue(targetValue)
     ) {
       // The same callback contributed by both layers represents one handler.
       if (sourceValue === targetValue) {
         merged[propName] = targetValue;
       } else {
-        merged[propName] = (...args: unknown[]) => {
-          targetValue(...args);
-          sourceValue(...args);
-        };
+        merged[propName] = (options.mergeEvent ?? mergeEventHandlers)(
+          sourceValue,
+          targetValue,
+        );
       }
       continue;
     }
