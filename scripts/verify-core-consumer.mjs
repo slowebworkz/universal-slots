@@ -1,111 +1,36 @@
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
+import {
+  assertConcreteDependencies,
+  assertExportTargets,
+  assertTarballContents,
+  findTarball,
+  listTarball,
+  readTarballManifest,
+  run,
+} from "./lib/package-artifact.mjs";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Check against the same TypeScript the workspace resolves, not a floating range.
 const typescriptVersion = createRequire(import.meta.url)(
   "typescript/package.json",
 ).version;
-const artifactDir = join(rootDir, "artifacts");
-const tarballPrefix = "universal-slots-core-";
-const run = (command, args, cwd, label) => {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit" });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(
-      `${label} failed with exit code ${result.status ?? "unknown"}.`,
-    );
-  }
-};
 
-const artifacts = (await readdir(artifactDir)).filter(
-  (name) => name.startsWith(tarballPrefix) && name.endsWith(".tgz"),
+const tarballPath = await findTarball(
+  join(rootDir, "artifacts"),
+  "universal-slots-core-",
+  "pnpm pack:core",
 );
-if (artifacts.length !== 1) {
-  throw new Error(
-    `Expected exactly one ${tarballPrefix}*.tgz in artifacts; found ${artifacts.length}. ` +
-      "Run pnpm pack:core first.",
-  );
-}
 
-const tarballPath = join(artifactDir, artifacts[0]);
-const archive = spawnSync("tar", ["-tzf", tarballPath], { encoding: "utf8" });
-if (archive.error) throw archive.error;
-if (archive.status !== 0) {
-  throw new Error(`Unable to inspect package tarball: ${archive.stderr}`);
-}
-
-const archiveFiles = archive.stdout.split(/\r?\n/).filter(Boolean);
-for (const expected of [
-  "package/package.json",
-  "package/LICENSE",
-  "package/dist/index.js",
-  "package/dist/index.d.ts",
-]) {
-  if (!archiveFiles.includes(expected)) {
-    throw new Error(`Package tarball is missing ${expected}.`);
-  }
-}
-const unexpectedFiles = archiveFiles.filter(
-  (name) =>
-    !name.endsWith("/") &&
-    name !== "package/package.json" &&
-    name !== "package/LICENSE" &&
-    !name.startsWith("package/dist/"),
-);
-if (unexpectedFiles.length > 0) {
-  throw new Error(
-    `Package tarball contains unexpected files: ${unexpectedFiles.join(", ")}`,
-  );
-}
-
-const manifestResult = spawnSync(
-  "tar",
-  ["-xOzf", tarballPath, "package/package.json"],
-  { encoding: "utf8" },
-);
-if (manifestResult.error) throw manifestResult.error;
-if (manifestResult.status !== 0) {
-  throw new Error(
-    `Unable to read packed package manifest: ${manifestResult.stderr}`,
-  );
-}
-const manifest = JSON.parse(manifestResult.stdout);
-for (const section of [
-  "dependencies",
-  "optionalDependencies",
-  "peerDependencies",
-]) {
-  for (const [dependency, version] of Object.entries(manifest[section] ?? {})) {
-    if (/^(workspace:|catalog:|link:|file:)/.test(version)) {
-      throw new Error(
-        `Packed dependency ${dependency} has unresolved protocol ${version}.`,
-      );
-    }
-  }
-}
-for (const target of [
-  manifest.exports?.["."]?.types,
-  manifest.exports?.["."]?.import,
-]) {
-  const archivePath = `package/${target?.replace(/^\.\//, "")}`;
-  if (typeof target !== "string" || !archiveFiles.includes(archivePath)) {
-    throw new Error(
-      `Packed package export target is missing from the tarball: ${target}`,
-    );
-  }
-}
+const archiveFiles = listTarball(tarballPath);
+assertTarballContents(archiveFiles);
+const manifest = readTarballManifest(tarballPath);
+assertConcreteDependencies(manifest);
+assertExportTargets(manifest, archiveFiles);
 
 const tempDir = await mkdtemp(join(tmpdir(), "universal-slots-core-consumer-"));
 try {
@@ -152,7 +77,7 @@ try {
     consumerDir,
     "Consumer TypeScript check",
   );
-  console.log(`\nExternal consumer verification passed for ${artifacts[0]}.`);
+  console.log(`\nExternal consumer verification passed for ${tarballPath}.`);
 } finally {
   await rm(tempDir, { recursive: true, force: true });
 }
