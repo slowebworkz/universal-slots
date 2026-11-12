@@ -3,7 +3,7 @@
 ## Supported versions
 
 UniversalSlots is pre-release (`0.x`). Security fixes are applied to the latest
-published version of `@universal-slots/core` and `@universal-slots/react` only.
+published version of the `universal-slots` package only.
 
 ## Reporting a vulnerability
 
@@ -30,8 +30,8 @@ Please include:
 
 ## Scope
 
-In scope: the published `@universal-slots/*` packages and this repository's
-source and build tooling.
+In scope: the published `universal-slots` package and this repository's source
+and build tooling.
 
 Out of scope: vulnerabilities in third-party dependencies (report those
 upstream; Dependabot alerts are enabled for this repository) and issues in
