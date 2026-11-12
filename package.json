@@ -7,7 +7,7 @@
     "node": ">=22.22.2"
   },
   "scripts": {
-    "build": "turbo run build",
+    "build": "pnpm -r build && pnpm typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "dev": "turbo run dev",
     "format": "prettier --write .",
@@ -15,7 +15,7 @@
     "lint": "turbo run lint && eslint eslint.config.ts vitest.config.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "pnpm -r typecheck",
     "prepare": "husky"
   },
   "lint-staged": {
