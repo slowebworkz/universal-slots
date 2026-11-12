@@ -25,3 +25,6 @@ pnpm-debug.log*
 # OS / editor
 .DS_Store
 .idea/
+
+# Local package artifacts
+artifacts/
