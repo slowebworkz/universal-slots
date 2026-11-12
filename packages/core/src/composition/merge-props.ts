@@ -8,6 +8,10 @@ export type CompositionProps = Record<string, unknown>;
 
 export type EventHandlerClassifier = (propName: string) => boolean;
 
+/**
+ * Combines source and target values. Either argument may be `undefined` when
+ * that composition layer does not provide the corresponding property.
+ */
 export type MergeValuePolicy = (
   sourceValue: unknown,
   targetValue: unknown,
