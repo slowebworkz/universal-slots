@@ -11,23 +11,49 @@ Core's runtime and type source has no React, other framework, or Praxis-kit
 imports. Framework event recognition and ref/lifecycle behavior remain in the
 React adapter.
 
-## Current external-consumer limitation
+## Package distribution status
 
-Both package export maps currently point directly at `src/index.ts`, and their
-`build` scripts run TypeScript with `noEmit`. This is suitable for the current
-workspace development setup but does not produce distributable JavaScript or
-`.d.ts` artifacts. Consequently, the current checks validate workspace package
-resolution and public source entry points, not installation from a packed npm
-artifact. A future release-readiness task must define emitted build output and
-verify it with `pnpm pack` plus a clean external consumer fixture.
+The two packages are at different stages.
+
+**`@universal-slots/core` produces distributable output.** `pnpm --filter
+@universal-slots/core build` runs `tsc -p tsconfig.build.json` and emits ESM
+JavaScript and `.d.ts` declarations into `dist/` (test files excluded). Its
+export map points strictly at `dist`, and its `files` allowlist is `dist` and
+`LICENSE`, so the packed artifact contains no `src`. Workspace-only source
+resolution lives outside the published manifest: React's `tsconfig.json` maps
+`@universal-slots/core` to core's source with `paths`, and the root Vitest
+config aliases it the same way, so typecheck and tests do not need a prior
+build.
+
+**`@universal-slots/react` is not independently packaged.** It has no `exports`,
+`main`, or `types` fields and no emit step: its `build` script runs
+`tsc --noEmit`. Within the workspace it is consumed through its source entry
+point (`packages/react/src/index.ts`) only. Its dependency on core is declared
+as `workspace:*`, which `pnpm pack` rewrites to a concrete version, so packing
+React is only meaningful once core is published or installed from a tarball.
+Giving React an emitted `dist`, an export map, and its own packed-consumer
+verification is future release-readiness work.
+
+## Verifying the packed core package
+
+`pnpm pack:core` cleans, rebuilds, and packs core into `artifacts/`. `pnpm
+verify:core` then runs `publint --strict`, inspects the tarball (required
+files present, nothing outside `dist`, `LICENSE`, and `package.json`, no
+unresolved `workspace:` or `catalog:` dependency protocols, export targets
+present), installs the tarball into a temporary consumer outside the
+workspace, and checks both an ESM runtime import and a TypeScript fixture
+(including a negative assertion) against the packaged declarations. See
+[package-development.md](../package-development.md). This covers core only; no
+equivalent check exists for React yet, and the check is not part of CI.
 
 ## Turbo build outputs
 
-The current `build` scripts are TypeScript validation tasks (`tsc --noEmit`),
-not artifact-producing builds. Their Turbo task declares `outputs: []` so the
-cache does not expect a `dist/` directory that these scripts never create.
-When package builds begin emitting distributable JavaScript and declarations,
-update the Turbo outputs and package export maps together.
+Core's `build` emits `dist/`, so the Turbo `build` task declares
+`outputs: ["dist/**"]`. React's `build` is still a TypeScript validation task
+(`tsc --noEmit`) and produces no outputs. The root `build` script currently
+runs `pnpm -r build` followed by a typecheck rather than `turbo run build`, so
+Turbo's cache does not apply to it. When React begins emitting a distributable
+build, update its export map and any additional Turbo outputs together.
 
 ## Runtime guard dependency
 

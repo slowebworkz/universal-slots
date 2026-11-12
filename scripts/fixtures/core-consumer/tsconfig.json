@@ -1,0 +1,17 @@
+{
+  // Editor-only configuration. The packed-consumer check copies
+  // `tsconfig.consumer.json` into the temporary consumer as its tsconfig.json,
+  // where `@universal-slots/core` resolves to the installed tarball.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@universal-slots/core": ["../../../packages/core/src/index.ts"]
+    }
+  },
+  "include": ["consumer.ts"]
+}
