@@ -7,6 +7,15 @@ export default defineConfig(
   eslint.configs.recommended,
   tseslint.configs.recommended,
   {
+    // Node-run repository scripts.
+    files: ["scripts/**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+      },
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/consistent-type-imports": [
