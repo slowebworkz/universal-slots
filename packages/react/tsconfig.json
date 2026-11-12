@@ -3,7 +3,13 @@
   "compilerOptions": {
     "noEmit": true,
     "jsx": "react-jsx",
-    "lib": ["ES2023", "DOM"]
+    "lib": ["ES2023", "DOM"],
+    // Typecheck against core's source so the workspace does not need a prior
+    // build. This mapping is workspace-only; core's published export map points
+    // strictly at `dist`.
+    "paths": {
+      "@universal-slots/core": ["../core/src/index.ts"]
+    }
   },
   "include": ["src"]
 }
