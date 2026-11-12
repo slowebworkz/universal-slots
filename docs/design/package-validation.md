@@ -13,26 +13,33 @@ React adapter.
 
 ## Package distribution status
 
-The two packages are at different stages.
+Both packages emit distributable output. Only core has a packed-consumer
+verification so far.
 
 **`@universal-slots/core` produces distributable output.** `pnpm --filter
 @universal-slots/core build` runs `tsc -p tsconfig.build.json` and emits ESM
 JavaScript and `.d.ts` declarations into `dist/` (test files excluded). Its
 export map points strictly at `dist`, and its `files` allowlist is `dist` and
 `LICENSE`, so the packed artifact contains no `src`. Workspace-only source
-resolution lives outside the published manifest: React's `tsconfig.json` maps
-`@universal-slots/core` to core's source with `paths`, and the root Vitest
-config aliases it the same way, so typecheck and tests do not need a prior
-build.
+resolution lives outside the published manifest: React's editor and typecheck
+`tsconfig.json` maps `@universal-slots/core` to core's source with `paths`, and
+the root Vitest config aliases it the same way, so typecheck and tests do not
+need a prior build.
 
-**`@universal-slots/react` is not independently packaged.** It has no `exports`,
-`main`, or `types` fields and no emit step: its `build` script runs
-`tsc --noEmit`. Within the workspace it is consumed through its source entry
-point (`packages/react/src/index.ts`) only. Its dependency on core is declared
-as `workspace:*`, which `pnpm pack` rewrites to a concrete version, so packing
-React is only meaningful once core is published or installed from a tarball.
-Giving React an emitted `dist`, an export map, and its own packed-consumer
-verification is future release-readiness work.
+**`@universal-slots/react` also produces distributable output, but is not yet
+verified as a packed package.** Its `build` runs `tsc -p tsconfig.build.json`
+and emits ESM JavaScript and `.d.ts` declarations into `dist/` (tests and the
+`*.consumer-types.tsx` fixture excluded). Its export map points strictly at
+`dist`, and its `files` allowlist is `dist` and `LICENSE`. Unlike its typecheck
+configuration, the build configuration has no `paths` mapping to core's
+source: it resolves `@universal-slots/core` through core's published export
+map, so core must be built first (the root `pnpm build` orders this) and the
+emitted JavaScript and declarations keep `@universal-slots/core` as a package
+specifier. Its dependency on core is declared as `workspace:*`, which `pnpm
+pack` rewrites to a concrete version (currently `0.0.0`), and its `react` peer
+range comes from the catalog (`^19.0.0`). Installing a packed React elsewhere
+therefore requires core's tarball first. A `pack:react` command, a `publint`
+run, and an external-consumer check for React are future work.
 
 ## Verifying the packed core package
 
@@ -48,12 +55,11 @@ equivalent check exists for React yet, and the check is not part of CI.
 
 ## Turbo build outputs
 
-Core's `build` emits `dist/`, so the Turbo `build` task declares
-`outputs: ["dist/**"]`. React's `build` is still a TypeScript validation task
-(`tsc --noEmit`) and produces no outputs. The root `build` script currently
+Core's and React's `build` scripts emit `dist/`, so the Turbo `build` task
+declares `outputs: ["dist/**"]`. The root `build` script currently
 runs `pnpm -r build` followed by a typecheck rather than `turbo run build`, so
-Turbo's cache does not apply to it. When React begins emitting a distributable
-build, update its export map and any additional Turbo outputs together.
+Turbo's cache does not apply to it. When a package's emitted output changes,
+update its export map and the Turbo outputs together.
 
 ## Runtime guard dependency
 

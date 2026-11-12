@@ -8,7 +8,7 @@
     "react": "catalog:"
   },
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
     "lint": "eslint src",
     "test": "vitest run",
@@ -25,5 +25,17 @@
   "dependencies": {
     "@universal-slots/core": "workspace:*",
     "remeda": "catalog:"
-  }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "types": "./dist/index.d.ts"
 }
