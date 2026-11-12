@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "typecheck": "pnpm -r typecheck",
     "prepare": "husky",
-    "pack:core": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && node scripts/pack-core.mjs"
+    "pack:core": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && node scripts/pack-core.mjs",
+    "check:core-package": "publint --strict packages/core",
+    "verify:core": "pnpm pack:core && pnpm check:core-package && node scripts/verify-core-consumer.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
@@ -33,7 +35,8 @@
     "jiti": "^2.7.0",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
-    "turbo": "^2.11.10",
+    "publint": "^0.3.25",
+    "turbo": "^2.11.11",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"
