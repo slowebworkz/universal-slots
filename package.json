@@ -19,7 +19,10 @@
     "prepare": "husky",
     "pack:core": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && node scripts/pack-core.mjs",
     "check:core-package": "publint --strict packages/core",
-    "verify:core": "pnpm pack:core && pnpm check:core-package && node scripts/verify-core-consumer.mjs"
+    "verify:core": "pnpm pack:core && pnpm check:core-package && node scripts/verify-core-consumer.mjs",
+    "pack:react": "pnpm pack:core && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && node scripts/pack-react.mjs",
+    "check:react-package": "publint --strict packages/react",
+    "verify:react": "pnpm pack:react && pnpm check:react-package && node scripts/verify-react-consumer.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
