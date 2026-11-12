@@ -1,5 +1,12 @@
 # Package development
 
+> **Distribution direction:** UniversalSlots is intended to publish as one
+> package, `universal-slots`, with Core and framework adapters exposed through
+> subpath exports. The separate `@universal-slots/core` and
+> `@universal-slots/react` tarballs described below are transitional workspace
+> verification artifacts. They are not independent release candidates. US-009b.6
+> will replace this two-tarball test workflow with one assembled root tarball.
+
 ## Build the workspace
 
 Run the root build command to build workspace packages and then typecheck
@@ -30,7 +37,7 @@ does not accumulate stale artifacts.
 
 ## Create local Core and React tarballs
 
-Build and pack both public packages from the repository root:
+Build and pack the current Core and React workspace artifacts from the repository root:
 
 ```sh
 pnpm pack:react
@@ -83,8 +90,9 @@ needs its `react` peer (`^19.0.0`) installed in the consumer.
 After rebuilding UniversalSlots, run the install again with the regenerated
 tarball paths to update the consumer's dependencies and lockfile.
 
-The tarballs are local test artifacts, not published releases. Do not commit
-them or rely on their `0.0.0` versions as release versions.
+These two tarballs are transitional local test artifacts, not published releases.
+Do not commit them or rely on their `0.0.0` versions as release versions. The
+intended public release is one `universal-slots` tarball containing both APIs.
 
 ## Verify the packed core package
 

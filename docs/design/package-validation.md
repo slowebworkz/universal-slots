@@ -13,8 +13,15 @@ React adapter.
 
 ## Package distribution status
 
-Both packages emit distributable output. Only core has a packed-consumer
-verification so far.
+> **Transitional workspaces.** The intended public release is one
+> `universal-slots` package with subpath exports (see the roadmap). The
+> `@universal-slots/core` and `@universal-slots/react` workspace packages, their
+> tarballs, and the checks below are build and consumer-test boundaries; they
+> are not independent release candidates. The single-package assembly (US-009b.6)
+> will replace the two-tarball workflow.
+
+Both workspace packages emit distributable output and each has a packed-consumer
+verification.
 
 **`@universal-slots/core` produces distributable output.** `pnpm --filter
 @universal-slots/core build` runs `tsc -p tsconfig.build.json` and emits ESM
@@ -26,8 +33,7 @@ resolution lives outside the published manifest: React's editor and typecheck
 the root Vitest config aliases it the same way, so typecheck and tests do not
 need a prior build.
 
-**`@universal-slots/react` also produces distributable output, but is not yet
-verified as a packed package.** Its `build` runs `tsc -p tsconfig.build.json`
+**`@universal-slots/react` also produces distributable output.** Its `build` runs `tsc -p tsconfig.build.json`
 and emits ESM JavaScript and `.d.ts` declarations into `dist/` (tests and the
 `*.consumer-types.tsx` fixture excluded). Its export map points strictly at
 `dist`, and its `files` allowlist is `dist` and `LICENSE`. Unlike its typecheck
@@ -37,9 +43,9 @@ map, so core must be built first (the root `pnpm build` orders this) and the
 emitted JavaScript and declarations keep `@universal-slots/core` as a package
 specifier. Its dependency on core is declared as `workspace:*`, which `pnpm
 pack` rewrites to a concrete version (currently `0.0.0`), and its `react` peer
-range comes from the catalog (`^19.0.0`). Installing a packed React elsewhere
-therefore requires core's tarball first. A `pack:react` command, a `publint`
-run, and an external-consumer check for React are future work.
+range comes from the catalog (`^19.0.0`). The packed React depends on
+`@universal-slots/core@0.0.0`, which does not exist on the npm registry, so a
+consumer must override that dependency to point at core's local tarball.
 
 ## Verifying the packed core package
 
@@ -50,8 +56,22 @@ unresolved `workspace:` or `catalog:` dependency protocols, export targets
 present), installs the tarball into a temporary consumer outside the
 workspace, and checks both an ESM runtime import and a TypeScript fixture
 (including a negative assertion) against the packaged declarations. See
-[package-development.md](../package-development.md). This covers core only; no
-equivalent check exists for React yet, and the check is not part of CI.
+[package-development.md](../package-development.md).
+
+## Verifying the packed React package
+
+`pnpm pack:react` packs core, then cleans, rebuilds, and packs React. `pnpm
+verify:react` runs `publint --strict`, inspects the React tarball with the same
+checks as core, and verifies that it depends on exactly the core version that
+was packed beside it. It then installs the React tarball into a temporary
+consumer outside the workspace. That consumer's `pnpm-workspace.yaml` overrides
+`@universal-slots/core` to core's local tarball, because pnpm would otherwise
+resolve it from the registry and fail with `ERR_PNPM_FETCH_404`. The check
+server-renders `Slot` (default and configured class composition, and
+`composition` not leaking to the DOM) and compiles a TypeScript fixture with
+negative assertions against the packaged declarations.
+
+Neither verification is part of CI, because both install from the network.
 
 ## Turbo build outputs
 
