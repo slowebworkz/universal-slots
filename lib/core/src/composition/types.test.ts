@@ -28,6 +28,8 @@ type TargetProps = {
 
 type Result = MergeCompositionProps<SourceProps, TargetProps, "onActivate">;
 
+type Empty = Record<never, never>;
+
 describe("MergeCompositionProps", () => {
   it("preserves source-only and target-only properties", () => {
     expectTypeOf<Result["id"]>().toEqualTypeOf<string>();
@@ -38,8 +40,35 @@ describe("MergeCompositionProps", () => {
     expectTypeOf<Result["title"]>().toEqualTypeOf<"target">();
   });
 
-  it("represents class concatenation as a string", () => {
-    expectTypeOf<Result["className"]>().toEqualTypeOf<string>();
+  it("represents class concatenation as a string or undefined", () => {
+    expectTypeOf<Result["className"]>().toEqualTypeOf<string | undefined>();
+  });
+
+  it("projects class normalization for mixed and exclusive values", () => {
+    type Mixed = MergeCompositionProps<
+      { className: string },
+      { className: number }
+    >;
+    type SourceOnlyString = MergeCompositionProps<{ class: string }, Empty>;
+    type SourceOnlyInvalid = MergeCompositionProps<
+      { className: number },
+      Empty
+    >;
+    type TargetOnlyString = MergeCompositionProps<Empty, { className: string }>;
+    type TargetOnlyInvalid = MergeCompositionProps<
+      Empty,
+      { className: number }
+    >;
+
+    expectTypeOf<Mixed["className"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<SourceOnlyString["class"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<SourceOnlyInvalid["className"]>().toEqualTypeOf<undefined>();
+    expectTypeOf<TargetOnlyString["className"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<TargetOnlyInvalid["className"]>().toEqualTypeOf<undefined>();
   });
 
   it("merges style object keys with target precedence", () => {
@@ -47,6 +76,34 @@ describe("MergeCompositionProps", () => {
       color: "blue";
       padding: number;
       margin: number;
+    }>();
+  });
+
+  it("rejects non-nullish style values that the runtime rejects", () => {
+    type Primitive = MergeCompositionProps<
+      { style: { color: string } },
+      { style: string }
+    >;
+    type ArrayValue = MergeCompositionProps<
+      { style: { color: string } },
+      { style: string[] }
+    >;
+    type FunctionValue = MergeCompositionProps<
+      { style: { color: string } },
+      { style: () => void }
+    >;
+    type InvalidSourceOnly = MergeCompositionProps<{ style: number }, Empty>;
+    type ValidWithNullishTarget = MergeCompositionProps<
+      { style: { color: string } },
+      { style: null }
+    >;
+
+    expectTypeOf<Primitive["style"]>().toBeNever();
+    expectTypeOf<ArrayValue["style"]>().toBeNever();
+    expectTypeOf<FunctionValue["style"]>().toBeNever();
+    expectTypeOf<InvalidSourceOnly["style"]>().toBeNever();
+    expectTypeOf<ValidWithNullishTarget["style"]>().toEqualTypeOf<{
+      color: string;
     }>();
   });
 
@@ -156,15 +213,6 @@ describe("MergeCompositionProps", () => {
     }>();
   });
 
-  it("distinguishes absent optional values from explicit undefined", () => {
-    type OptionalTarget = MergeCompositionProps<
-      { title: string },
-      { title?: string | undefined }
-    >;
-
-    expectTypeOf<OptionalTarget["title"]>().toEqualTypeOf<string | undefined>();
-  });
-
   it("preserves optional source-only properties", () => {
     type Merged = MergeCompositionProps<{ hint?: string }, { id: string }>;
 
@@ -219,5 +267,77 @@ describe("MergeCompositionProps", () => {
       padding: number;
       margin: number;
     }>();
+  });
+
+  it("returns the other side unchanged when one input is an empty object", () => {
+    expectTypeOf<MergeCompositionProps<Empty, { id: string }>>().toEqualTypeOf<{
+      id: string;
+    }>();
+    expectTypeOf<MergeCompositionProps<{ id: string }, Empty>>().toEqualTypeOf<{
+      id: string;
+    }>();
+    expectTypeOf<MergeCompositionProps<Empty, Empty>>().toEqualTypeOf<Empty>();
+  });
+
+  it("collapses to never when either input is never", () => {
+    expectTypeOf<MergeCompositionProps<never, { id: string }>>().toBeNever();
+    expectTypeOf<MergeCompositionProps<{ id: string }, never>>().toBeNever();
+  });
+
+  it("distributes discriminated unions per member", () => {
+    type Merged = MergeCompositionProps<
+      { kind: "a"; a: string } | { kind: "b"; b: number },
+      { enabled: boolean }
+    >;
+
+    expectTypeOf<Merged>().toEqualTypeOf<
+      | { kind: "a"; a: string; enabled: boolean }
+      | { kind: "b"; b: number; enabled: boolean }
+    >();
+  });
+
+  it("normalizes the class fallback when an optional target omits the key", () => {
+    type Merged = MergeCompositionProps<
+      { className: number },
+      { className?: string }
+    >;
+    type StringSource = MergeCompositionProps<
+      { className: string },
+      { className?: number }
+    >;
+
+    expectTypeOf<Merged["className"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<StringSource["className"]>().toEqualTypeOf<
+      string | undefined
+    >();
+  });
+
+  it("validates the style fallback when an optional target omits the key", () => {
+    type InvalidSource = MergeCompositionProps<
+      { style: number },
+      { style?: { color: string } }
+    >;
+    type ValidSource = MergeCompositionProps<
+      { style: { padding: number } },
+      { style?: { color: string } }
+    >;
+
+    expectTypeOf<InvalidSource["style"]>().toBeNever();
+    expectTypeOf<ValidSource["style"]>().toEqualTypeOf<
+      { padding: number } | { padding: number; color: string }
+    >();
+  });
+
+  it("keeps the source fallback unchanged for ordinary and event keys", () => {
+    type Merged = MergeCompositionProps<
+      { title: number; onPress: () => void },
+      { title?: string; onPress?: (event: string) => void },
+      "onPress"
+    >;
+
+    expectTypeOf<Merged["title"]>().toEqualTypeOf<number | string>();
+    expectTypeOf<Merged["onPress"]>().toEqualTypeOf<
+      (() => void) | ((() => void) & ((event: string) => void))
+    >();
   });
 });

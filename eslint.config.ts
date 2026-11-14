@@ -16,6 +16,13 @@ export default defineConfig(
     },
   },
   {
+    // Type-only fixtures declare values purely so the compiler checks them.
+    files: ["**/*.consumer-types.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/consistent-type-imports": [

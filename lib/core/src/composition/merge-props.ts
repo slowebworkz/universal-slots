@@ -1,3 +1,5 @@
+import { isArray, isFunction, isNullish, isObjectType, isString } from "remeda";
+
 /**
  * Framework-neutral composition policies for combining source props with a target.
  *
@@ -28,10 +30,6 @@ export type MergeEventPolicy = (
   targetHandler: EventHandlerValue,
 ) => unknown;
 
-function isEventHandlerValue(value: unknown): value is EventHandlerValue {
-  return typeof value === "function";
-}
-
 export interface MergeCompositionPropsOptions {
   /** The adapter's convention for identifying event-handler properties. */
   isEventHandler: EventHandlerClassifier;
@@ -43,15 +41,17 @@ export interface MergeCompositionPropsOptions {
   mergeEvent?: MergeEventPolicy;
 }
 
+/** A trimmed, non-empty class string, or `undefined` for anything else. */
+function normalizeClass(value: unknown): string | undefined {
+  if (!isString(value)) return undefined;
+
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
 function mergeClassValues(sourceValue: unknown, targetValue: unknown): unknown {
-  const sourceClass =
-    typeof sourceValue === "string" && sourceValue.trim() !== ""
-      ? sourceValue.trim()
-      : undefined;
-  const targetClass =
-    typeof targetValue === "string" && targetValue.trim() !== ""
-      ? targetValue.trim()
-      : undefined;
+  const sourceClass = normalizeClass(sourceValue);
+  const targetClass = normalizeClass(targetValue);
 
   if (sourceClass && targetClass) {
     return `${sourceClass} ${targetClass}`;
@@ -61,11 +61,11 @@ function mergeClassValues(sourceValue: unknown, targetValue: unknown): unknown {
 }
 
 function isStyleObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return isObjectType(value) && !isArray(value);
 }
 
 function assertStyleObject(value: unknown): void {
-  if (value != null && !isStyleObject(value)) {
+  if (!isNullish(value) && !isStyleObject(value)) {
     throw new TypeError("Composition style values must be objects or nullish.");
   }
 }
@@ -77,8 +77,8 @@ function mergeStyleObjects(
   assertStyleObject(sourceValue);
   assertStyleObject(targetValue);
 
-  if (sourceValue == null) return targetValue;
-  if (targetValue == null) return sourceValue;
+  if (isNullish(sourceValue)) return targetValue;
+  if (isNullish(targetValue)) return sourceValue;
 
   return { ...sourceValue, ...targetValue };
 }
@@ -144,8 +144,8 @@ export function mergeCompositionProps(
 
     if (
       options.isEventHandler(propName) &&
-      isEventHandlerValue(sourceValue) &&
-      isEventHandlerValue(targetValue)
+      isFunction(sourceValue) &&
+      isFunction(targetValue)
     ) {
       // The same callback contributed by both layers represents one handler.
       if (sourceValue === targetValue) {
