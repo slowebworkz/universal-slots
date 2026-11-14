@@ -1,18 +1,17 @@
 # Single-package distribution contract
 
-**Status:** Proposed contract for US-009b.6.1
+**Status:** Accepted contract for US-009b.6.1
 **Public package:** `universal-slots`
 
-This document proposes the initial public package boundary and distribution
-shape for review. Once agreed, it will guide the assembly work in
-US-009b.6.2. It does not change workspace manifests or build scripts.
+This document records the accepted public package boundary and distribution
+shape. US-009b.6.2 implements the workspace layout, build assembly, public
+manifest, and single-tarball workflow.
 
 ## 1. Public package identity
 
 - Publish one package named `universal-slots`.
 - The root `package.json` is the public package manifest and the source of
-  truth for the published version; its `private: true` setting must be removed
-  when the package is made publishable.
+  truth for the published version.
 - The initial package is ESM-only (`type: module`). CommonJS support is not
   part of the initial contract.
 - Preserve the repository's current minimum Node.js engine declaration:
@@ -90,9 +89,8 @@ lib/
 - Internal workspace dependencies and source aliases are development
   mechanisms. They must not leak into the public manifest or packed output.
 
-The move from the current transitional `packages/core` and `packages/react`
-locations is performed with the assembly implementation in US-009b.6.2, not
-by this contract-only change.
+The internal workspaces now live at `lib/core` and `lib/react`. Their manifests
+remain private workspace manifests and are not included in the public tarball.
 
 ## 4. Distribution layout and internal references
 

@@ -5,6 +5,7 @@
   "description": "Framework-neutral polymorphic composition policies for UniversalSlots.",
   "license": "MIT",
   "dependencies": {
+    "remeda": "catalog:",
     "type-fest": "catalog:"
   },
   "exports": {
@@ -18,12 +19,13 @@
     "clean": "rm -rf dist",
     "lint": "eslint src",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.non-exact.json"
   },
   "sideEffects": false,
   "files": [
     "dist",
     "LICENSE"
   ],
-  "types": "./dist/index.d.ts"
+  "types": "./dist/index.d.ts",
+  "private": true
 }

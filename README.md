@@ -21,6 +21,7 @@ Requirements: Node.js >=22.22.2 and pnpm 12.
 ```sh
 pnpm install
 pnpm build
+pnpm run pack
 pnpm lint
 pnpm test
 pnpm typecheck
@@ -87,7 +88,7 @@ into UniversalSlots. See
 [the TypeScript composition design](./docs/design/typescript-composition.md).
 
 See [polymorphic composition semantics](./docs/design/polymorphic-composition.md)
-for the composition contract.
+for the composition contract. Run `pnpm run pack` to create a local tarball.
 
 ## Workspace conventions
 
@@ -98,7 +99,6 @@ for the composition contract.
   when there is a concrete need for one.
 - `apps/*` is intentionally omitted until an actual application is needed.
 
-The current Core and React tarballs are local verification artifacts, not the
-planned public release format. The published package must never depend on a
-private workspace package: internal workspace output is assembled into the
-public artifact, and workspace-only references are resolved during assembly.
+Core and React are private implementation workspaces. Their build outputs are
+assembled into the single public package, and workspace-only references are
+rewritten during assembly.

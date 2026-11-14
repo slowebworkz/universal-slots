@@ -7,8 +7,8 @@ depending on Praxis-kit or any other consumer library.
 
 The type-level API has two layers:
 
-- `@universal-slots/core` provides framework-neutral composition projection.
-- `@universal-slots/react` provides React target prop/ref extraction and applies
+- `universal-slots/core` provides framework-neutral composition projection.
+- `universal-slots/react` provides React target prop/ref extraction and applies
   the shared projection to React's `on[A-Z]` event-handler naming convention.
 
 Consumer libraries remain responsible for their own component factories,
@@ -40,7 +40,7 @@ framework conformance remain necessary.
 
 ## React target types
 
-`@universal-slots/react` exports:
+`universal-slots/react` exports:
 
 - `ReactTargetProps<Target>` — props declared by an intrinsic element or
   component target, excluding its ref.
@@ -58,7 +58,7 @@ know the prop vocabulary of every component library using it. Its target ref
 can be explicitly typed with the target generic:
 
 ```tsx
-import { Slot } from "@universal-slots/react";
+import { Slot } from "universal-slots/react";
 
 <Slot<"a"> ref={anchorRef} aria-label="Profile">
   <a href="/profile">Profile</a>
@@ -91,7 +91,7 @@ Other component libraries can do the same without adopting Praxis's type model.
 ## Internal type architecture
 
 The core projection is decomposed into internal modules under
-`packages/core/src/composition/types/`:
+`lib/core/src/composition/types/`:
 
 - `property-keys.ts` derives union-aware key sets, optional/required keys, and
   the value a property can have when it is present.
@@ -138,7 +138,7 @@ its component types dependencies of UniversalSlots:
 
 ```tsx
 import type { ComponentPropsWithoutRef } from "react";
-import type { ReactCompositionProps } from "@universal-slots/react";
+import type { ReactCompositionProps } from "universal-slots/react";
 
 type ButtonSourceProps = {
   variant: "primary" | "secondary";
