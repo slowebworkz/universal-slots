@@ -42,5 +42,15 @@ the three public design documents. The pack script inspects the resulting
 tarball and fails if required entrypoints are missing or unexpected files are
 included.
 
-Strict `publint` and clean external-consumer runtime/type checks are the next
-validation stage, US-009b.6.3.
+`pnpm verify:package` runs strict `publint` and verifies the packed tarball in
+isolated external consumers. Consumer dependency versions are read from the
+resolved default catalog in `pnpm-lock.yaml`, and installation runs offline. The
+package's own `type-fest` and `remeda` dependencies keep their semver ranges, but
+each consumer pins them to the locked versions with `pnpm-workspace.yaml`
+overrides and fails if a different version resolves.
+The Core-only consumer checks class, style, event, and ordinary-prop merging
+without React installed, plus exact declaration assertions and negative cases.
+The React consumer renders the packaged `Slot` with `react-dom/server` and
+checks composed class, style, and event-handler output, then compiles the public
+declarations. These checks are the first implementation slice of US-009b.6.3;
+release automation and publication policy remain separate work.

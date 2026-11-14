@@ -17,7 +17,8 @@
     "typecheck": "pnpm -r typecheck",
     "prepare": "husky",
     "pack": "pnpm build && node scripts/pack-package.mjs",
-    "check:package": "publint --strict ."
+    "check:package": "publint --strict .",
+    "verify:package": "pnpm run pack && pnpm check:package && node scripts/verify-consumer.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
