@@ -81,3 +81,10 @@ import { Slot } from "universal-slots/react";
 The React subpath requires a compatible React 19 peer dependency and, for
 TypeScript consumers, compatible React 19 type declarations. Core-only
 consumers do not need to install React.
+
+## Release preparation
+
+See [the release process](./releasing.md) for the single-package versioning,
+changelog, dry-run, npm trusted-publishing, and GitHub Release procedures.
+The root package version is authoritative; do not version or publish the
+private Core and React workspaces independently.

@@ -179,7 +179,7 @@ stable external repository URLs once those are established).
 The implementation and verification of assembly, packing, strict package
 validation, and clean external-consumer installation belong to
 US-009b.6.2 and US-009b.6.3. Publication automation and release policy beyond
-the single root version are addressed in US-009b.6.3.
+the single root version are addressed in US-009b.6.4.
 
 ## 8. Acceptance checks for this contract
 
@@ -194,3 +194,18 @@ Before implementation proceeds, the following decisions must remain true:
 - The root version is the only public version.
 - The packed package contains the two subpath outputs and their declared
   dependencies, with no workspace-only references.
+
+## 9. Release and publication policy
+
+The root `package.json` is the sole version source for the public package.
+Core and React ship together. The initial public release is intended to be
+`0.1.0`; the API and React adapter remain experimental. Stable release tags use
+`vMAJOR.MINOR.PATCH` and must match the root package version and a dated
+`CHANGELOG.md` entry.
+
+The release workflow first validates and verifies a pushed version tag without
+publishing. A separate manual workflow dispatch against that tag, with its
+`publish` input explicitly enabled, publishes the exact verified root tarball
+using npm trusted publishing and provenance, then creates the GitHub Release
+from the matching changelog section. See [the release process](../releasing.md)
+for versioning, changelog, permissions, and recovery procedures.
