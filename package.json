@@ -18,7 +18,8 @@
     "prepare": "husky",
     "pack": "pnpm build && node scripts/pack-package.mjs",
     "check:package": "publint --strict .",
-    "verify:package": "pnpm run pack && pnpm check:package && node scripts/verify-consumer.mjs"
+    "verify:package": "pnpm run pack && pnpm check:package && node scripts/verify-consumer.mjs",
+    "release:check": "node scripts/validate-release.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
@@ -43,6 +44,10 @@
   "type": "module",
   "description": "Framework-neutral composition policies and framework adapters for polymorphic UI composition.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slowebworkz/universal-slots.git"
+  },
   "sideEffects": false,
   "files": [
     "dist",

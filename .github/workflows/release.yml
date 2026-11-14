@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to npm and create a GitHub Release; otherwise validate only
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      # Actions are pinned to full commit SHAs because this workflow can publish.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Require the tagged commit to be on main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Tag $GITHUB_REF_NAME points to a commit that is not on main." >&2
+            exit 1
+          fi
+
+      - name: Validate release tag and changelog
+        run: |
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+            echo "Release validation must run from a version tag." >&2
+            exit 1
+          fi
+          node scripts/validate-release.mjs --tag "$GITHUB_REF_NAME" > .release-notes.md
+
+      - name: Verify packed package
+        run: pnpm verify:package
+
+      - name: Resolve package tarball
+        id: package
+        run: echo "path=$(node scripts/print-package-tarball.mjs)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish package to npm
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          PACKAGE_TARBALL: ${{ steps.package.outputs.path }}
+        run: npm publish "$PACKAGE_TARBALL" --access public --provenance
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE_TARBALL: ${{ steps.package.outputs.path }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          "$PACKAGE_TARBALL"
+          --verify-tag
+          --title "$GITHUB_REF_NAME"
+          --notes-file .release-notes.md

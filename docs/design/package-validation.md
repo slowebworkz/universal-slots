@@ -52,5 +52,6 @@ The Core-only consumer checks class, style, event, and ordinary-prop merging
 without React installed, plus exact declaration assertions and negative cases.
 The React consumer renders the packaged `Slot` with `react-dom/server` and
 checks composed class, style, and event-handler output, then compiles the public
-declarations. These checks are the first implementation slice of US-009b.6.3;
-release automation and publication policy remain separate work.
+declarations. These checks are the first implementation slice of US-009b.6.3.
+Release policy, tag validation, and publication automation are covered by
+US-009b.6.4; see [the release process](../releasing.md).
