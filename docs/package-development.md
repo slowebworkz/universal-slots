@@ -1,150 +1,65 @@
 # Package development
 
-> **Proposed distribution contract:** The proposed public package boundary,
-> exports, dependency policy, workspace locations, and packed-file allowlist
-> are documented in [the single-package distribution contract](./design/distribution-contract.md).
-> The proposal is one public package, `universal-slots`, with
-> `universal-slots/core` and `universal-slots/react` subpath exports.
->
-> **Transitional tooling:** The separate `@universal-slots/core` and
-> `@universal-slots/react` tarballs described below are temporary workspace
-> verification artifacts, not independent release candidates. They remain in
-> use until US-009b.6.2 and US-009b.6.3 replace them with one assembled root
-> tarball. Do not treat the transitional tarballs or their `0.0.0` versions as
-> the public release contract.
+The repository builds Core and React as private internal workspaces and
+assembles their output into one public `universal-slots` package. Consumers
+install one package and select an API through its documented subpath. See the
+[distribution contract](./design/distribution-contract.md).
 
-## Build the workspace
+## Build the public package
 
-Run the root build command to build workspace packages and then typecheck
-the workspace:
+From the repository root:
 
 ```sh
 pnpm build
 ```
 
-## Create a local core tarball
-
-Build and pack `@universal-slots/core` from the repository root:
-
-```sh
-pnpm pack:core
-```
-
-The command removes stale build output, rebuilds core, and writes one package
-tarball to `artifacts/`:
+The build cleans and builds the internal Core workspace first, builds React
+against Core's distributable declarations, then assembles both outputs under
+`dist/`:
 
 ```text
-artifacts/universal-slots-core-0.0.0.tgz
+dist/
+├── core/
+└── react/
 ```
 
-The directory is ignored by Git. Re-running `pnpm pack:core` removes the
-previous core tarball before creating its replacement, so the directory
-does not accumulate stale artifacts.
+The assembly step rewrites React's internal `@universal-slots/core` import to
+the public self-reference `universal-slots/core` in JavaScript and declaration
+files. The root package export map exposes only `./core` and `./react`.
 
-## Create local Core and React tarballs
-
-Build and pack the current Core and React workspace artifacts from the repository root:
+## Create one local package tarball
 
 ```sh
-pnpm pack:react
+pnpm run pack
 ```
 
-The command regenerates the Core tarball first, then cleans and builds React
-against Core's distributable output before creating the React tarball. It writes
-both artifacts to `artifacts/`:
+This rebuilds the package and creates one tarball under the ignored
+`artifacts/` directory:
 
 ```text
-artifacts/universal-slots-core-0.0.0.tgz
-artifacts/universal-slots-react-0.0.0.tgz
+artifacts/universal-slots-0.0.0.tgz
 ```
 
-Re-running `pnpm pack:react` replaces the previous Core and React tarballs, so
-the directory does not accumulate stale artifacts. The packed React manifest
-rewrites the `workspace:*` Core dependency to its package version
-(`@universal-slots/core@0.0.0`), which does not exist on the npm registry. See
-the install steps below for how a consumer resolves it to the local Core
-tarball.
+The pack step checks that both public entrypoints and their declarations are
+present and that the tarball contains only the root manifest, license, README,
+allowlisted design documentation, and assembled `dist/` output. Re-running
+`pnpm run pack` replaces the previous `universal-slots-*.tgz` artifact.
 
-## Install the tarballs in a consumer
-
-From the root of another pnpm project (for example, praxis-kit), the Core
-tarball is enough for `@universal-slots/core`:
+## Validate the package manifest
 
 ```sh
-pnpm add /absolute/path/to/universal-slots/artifacts/universal-slots-core-0.0.0.tgz
+pnpm check:package
 ```
 
-The React tarball depends on `@universal-slots/core@0.0.0`. Running `pnpm add`
-for both tarballs is **not** enough: pnpm resolves that dependency from the npm
-registry, where it does not exist, and fails with `ERR_PNPM_FETCH_404`. Add an
-override to the consumer's `pnpm-workspace.yaml` that points Core at the local
-tarball, then install React:
+This runs strict `publint` against the root package. External consumer runtime
+and declaration checks are covered by US-009b.6.3.
 
-```yaml
-overrides:
-  "@universal-slots/core": "file:/absolute/path/to/universal-slots/artifacts/universal-slots-core-0.0.0.tgz"
+## Public imports
+
+```ts
+import { mergeCompositionProps } from "universal-slots/core";
+import { Slot } from "universal-slots/react";
 ```
 
-```sh
-pnpm add /absolute/path/to/universal-slots/artifacts/universal-slots-react-0.0.0.tgz
-```
-
-The override must live in `pnpm-workspace.yaml`; a `pnpm.overrides` entry in the
-consumer's `package.json` is not picked up by this pnpm version. React also
-needs its `react` peer (`^19.0.0`) installed in the consumer.
-
-After rebuilding UniversalSlots, run the install again with the regenerated
-tarball paths to update the consumer's dependencies and lockfile.
-
-These two tarballs are transitional local test artifacts, not published releases.
-Do not commit them or rely on their `0.0.0` versions as release versions. The
-intended public release is one `universal-slots` tarball containing both APIs.
-
-## Verify the packed core package
-
-Run the complete package-consumer check from the repository root:
-
-```sh
-pnpm verify:core
-```
-
-This command:
-
-1. Cleans, builds, and packs `@universal-slots/core` into `artifacts/`.
-2. Runs strict `publint` checks against the built package using the pinned CLI.
-3. Inspects the tarball for the package manifest and emitted JavaScript and
-   declaration entrypoints, and rejects included source files.
-4. Creates a temporary consumer outside the workspace and installs the tarball
-   with pnpm.
-5. Exercises the ESM entrypoint and compiles a TypeScript fixture against the
-   package's public declarations and transitive type dependencies.
-
-The temporary consumer and its lockfile are removed after the check. The
-UniversalSlots tarball remains in `artifacts/` for installation into Praxis-kit.
-
-## Verify the packed React package
-
-```sh
-pnpm verify:react
-```
-
-This command:
-
-1. Packs Core, then cleans, builds, and packs `@universal-slots/react` against
-   Core's distributable output.
-2. Runs strict `publint` checks against the built React package.
-3. Inspects the React tarball (required files, nothing outside `dist`,
-   `LICENSE`, and `package.json`, concrete dependency versions, export targets
-   present) and checks that it depends on exactly the Core version that was
-   packed alongside it.
-4. Creates a temporary consumer outside the workspace with a
-   `pnpm-workspace.yaml` override that resolves Core to the local tarball, and
-   installs the React tarball with the workspace's React, React DOM, and
-   `@types/react` versions.
-5. Server-renders `Slot` (default class composition, a configured `mergeClass`
-   policy, and `composition` not leaking to the DOM) and compiles a TypeScript
-   fixture, including negative assertions, against the packaged declarations.
-
-Both verification commands share their tarball-inspection helpers in
-`scripts/lib/package-artifact.mjs`. Neither is part of CI yet, because both
-install from the network.
+The React subpath requires a compatible React 19 peer dependency. Core-only
+consumers do not need to install React.

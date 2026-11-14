@@ -18,7 +18,7 @@ replace:
 
 The reusable seam is the prop-composition operation inside
 `makeCloneSlotChild`. Praxis can retain its extraction, clone, and ref lifecycle
-while delegating the framework-neutral prop merge to `@universal-slots/core`.
+while delegating the framework-neutral prop merge to `universal-slots/core`.
 
 This is preferable to wrapping every Praxis child in UniversalSlots React
 `Slot`: the latter would add another rendering layer and would not replace
@@ -50,7 +50,7 @@ policies. The surrounding child extraction, ref composition, and cloning remain
 unchanged.
 
 ```ts
-import { mergeCompositionProps } from "@universal-slots/core";
+import { mergeCompositionProps } from "universal-slots/core";
 import {
   chainHandlers,
   mergeClassNames,
@@ -74,7 +74,7 @@ The cast at the event-policy boundary adapts UniversalSlots' intentionally
 framework-neutral callback type to Praxis's existing handler type. It does not
 introduce React event types into UniversalSlots core.
 
-The import from `@universal-slots/core` must be a declared dependency of the
+The import from `universal-slots/core` must be a declared dependency of the
 Praxis package that owns this call. Do not import UniversalSlots private source
 paths. Until the public package is published or made available through an
 intentional local workspace/link setup, this snippet is a design proof rather

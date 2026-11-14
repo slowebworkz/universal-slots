@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@universal-slots/core": fileURLToPath(
-        new URL("./packages/core/src/index.ts", import.meta.url),
+        new URL("./lib/core/src/index.ts", import.meta.url),
       ),
     },
   },

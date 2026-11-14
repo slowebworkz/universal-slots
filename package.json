@@ -1,14 +1,13 @@
 {
   "name": "universal-slots",
   "version": "0.0.0",
-  "private": true,
   "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": ">=22.22.2"
   },
   "scripts": {
-    "build": "pnpm -r build && pnpm typecheck",
-    "clean": "turbo run clean && rm -rf node_modules",
+    "build": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && pnpm typecheck && node scripts/assemble-package.mjs",
+    "clean": "turbo run clean && rm -rf dist artifacts",
     "dev": "turbo run dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -17,12 +16,8 @@
     "test:watch": "vitest",
     "typecheck": "pnpm -r typecheck",
     "prepare": "husky",
-    "pack:core": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && node scripts/pack-core.mjs",
-    "check:core-package": "publint --strict packages/core",
-    "verify:core": "pnpm pack:core && pnpm check:core-package && node scripts/verify-core-consumer.mjs",
-    "pack:react": "pnpm pack:core && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && node scripts/pack-react.mjs",
-    "check:react-package": "publint --strict packages/react",
-    "verify:react": "pnpm pack:react && pnpm check:react-package && node scripts/verify-react-consumer.mjs"
+    "pack": "pnpm build && node scripts/pack-package.mjs",
+    "check:package": "publint --strict ."
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
@@ -43,5 +38,43 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"
+  },
+  "type": "module",
+  "description": "Framework-neutral composition policies and framework adapters for polymorphic UI composition.",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "docs/design/polymorphic-composition.md",
+    "docs/design/react-slot-semantics.md",
+    "docs/design/typescript-composition.md"
+  ],
+  "exports": {
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    }
+  },
+  "dependencies": {
+    "type-fest": "^5.10.0",
+    "remeda": "^2.59.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "@types/react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    }
   }
 }

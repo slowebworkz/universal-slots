@@ -131,7 +131,7 @@ Type-level tests should verify public consumer behavior rather than internal hel
 ## Shared runtime policy engine
 
 The initial framework-neutral runtime policy implementation lives in the
-`@universal-slots/core` package. Framework adapters delegate common prop
+`universal-slots/core` package. Framework adapters delegate common prop
 composition to this package and supply their own event-handler recognition
 convention. Adapters remain responsible for native element/VNode/template
 manipulation, target validation, refs, and lifecycle behavior.
@@ -168,7 +168,7 @@ composition without making the core aware of React event types:
 import {
   mergeCompositionProps,
   type MergeEventPolicy,
-} from "@universal-slots/core";
+} from "universal-slots/core";
 
 type CancellableEvent = { defaultPrevented: boolean };
 
@@ -197,7 +197,7 @@ the composing handler when the target event is default-prevented and has its own
 class/style normalization behavior. Praxis integration must explicitly adapt those differences rather
 than changing the shared contract implicitly.
 
-`@universal-slots/core` has no framework or Praxis dependency. Framework
+`universal-slots/core` has no framework or Praxis dependency. Framework
 adapters may depend on it; Praxis and other component libraries may depend on
 UniversalSlots packages, but UniversalSlots must never import their types or
 runtime code.
