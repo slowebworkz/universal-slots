@@ -1,15 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { exit } from "node:process";
 import { fileURLToPath, URL } from "node:url";
 
+import {
+  findPackageTarball,
+  removePackageTarballs,
+} from "./package-artifacts.mjs";
+
 const rootDir = fileURLToPath(new URL("../", import.meta.url));
 const artifactDir = join(rootDir, "artifacts");
-const manifest = JSON.parse(
-  await readFile(join(rootDir, "package.json"), "utf8"),
-);
-const tarballPrefix = `${manifest.name}-`;
 
 for (const entrypoint of [
   "core/index.js",
@@ -25,12 +26,7 @@ for (const entrypoint of [
 }
 
 await mkdir(artifactDir, { recursive: true });
-const existingArtifacts = await readdir(artifactDir);
-await Promise.all(
-  existingArtifacts
-    .filter((name) => name.startsWith(tarballPrefix) && name.endsWith(".tgz"))
-    .map((name) => rm(join(artifactDir, name), { force: true })),
-);
+await removePackageTarballs(rootDir);
 
 const result = spawnSync("pnpm", ["pack", "--pack-destination", artifactDir], {
   cwd: rootDir,
@@ -39,16 +35,7 @@ const result = spawnSync("pnpm", ["pack", "--pack-destination", artifactDir], {
 if (result.error) throw result.error;
 if (result.status !== 0) exit(result.status ?? 1);
 
-const artifacts = (await readdir(artifactDir)).filter(
-  (name) => name.startsWith(tarballPrefix) && name.endsWith(".tgz"),
-);
-if (artifacts.length !== 1) {
-  throw new Error(
-    `Expected exactly one ${tarballPrefix}*.tgz artifact; found ${artifacts.length}.`,
-  );
-}
-
-const tarballPath = join(artifactDir, artifacts[0]);
+const tarballPath = await findPackageTarball(rootDir);
 const listing = spawnSync("tar", ["-tzf", tarballPath], {
   encoding: "utf8",
 });

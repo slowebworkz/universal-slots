@@ -51,8 +51,25 @@ allowlisted design documentation, and assembled `dist/` output. Re-running
 pnpm check:package
 ```
 
-This runs strict `publint` against the root package. External consumer runtime
-and declaration checks are covered by US-009b.6.3.
+This runs strict `publint` against the root package.
+
+## Verify the packed package
+
+```sh
+pnpm verify:package
+```
+
+This builds and packs the public package, runs strict `publint`, then installs
+the resulting tarball into isolated temporary consumers using exact package
+versions resolved in the repository lockfile. The package's `type-fest` and
+`remeda` dependencies are pinned to their locked versions in each consumer, and
+the check fails if any other version resolves. The checks run offline, so the
+root workspace dependencies must already be present in the pnpm store. The
+Core-only consumer verifies class, style, event, and ordinary-prop merging
+without React installed. The React consumer renders the packaged `Slot` with
+`react-dom/server` and verifies its composed class, style, and event-handler
+behavior. Both consumers compile exact public declaration checks. Temporary
+projects are removed after the check.
 
 ## Public imports
 
@@ -61,5 +78,6 @@ import { mergeCompositionProps } from "universal-slots/core";
 import { Slot } from "universal-slots/react";
 ```
 
-The React subpath requires a compatible React 19 peer dependency. Core-only
+The React subpath requires a compatible React 19 peer dependency and, for
+TypeScript consumers, compatible React 19 type declarations. Core-only
 consumers do not need to install React.

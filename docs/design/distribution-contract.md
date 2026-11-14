@@ -128,7 +128,7 @@ public subpaths.
 | Section            | Dependency     | Initial range | Reason                                                      |
 | ------------------ | -------------- | ------------- | ----------------------------------------------------------- |
 | `dependencies`     | `type-fest`    | `^5.10.0`     | Public Core declarations import its types                   |
-| `dependencies`     | `remeda`       | `^2.59.0`     | React adapter imports runtime utilities                     |
+| `dependencies`     | `remeda`       | `^2.59.0`     | Core and the React adapter import runtime utilities         |
 | `peerDependencies` | `react`        | `^19.0.0`     | Required when using the React subpath                       |
 | `peerDependencies` | `@types/react` | `^19.0.0`     | Required for TypeScript consumers of the React declarations |
 
