@@ -80,18 +80,39 @@ GitHub Release creation require explicitly enabling its `publish` input. This
 separation ensures that pushing a tag never publishes without a second, explicit
 release action.
 
-Before enabling publication, configure npm trusted publishing for the
-`universal-slots` package to trust this GitHub repository and the exact
-workflow filename `release.yml`. Do not configure a long-lived npm token in
-GitHub Actions. The workflow requests the GitHub OIDC `id-token` permission and
-publishes the verified tarball with npm provenance. It also needs the normal
-GitHub `contents: write` permission to create the GitHub Release.
+Before enabling publication, configure the GitHub `npm-production`
+environment with required reviewers and deployment restrictions appropriate
+for production releases. Configure npm trusted publishing for the
+`universal-slots` package to trust this GitHub repository, the exact workflow
+filename `release.yml`, and the environment name `npm-production`. The
+environment name must match in both GitHub and npm. Do not configure a
+long-lived npm token in GitHub Actions.
+
+npm trusted publishing requires npm CLI 11.5.1 or later and Node.js 22.14.0
+or later. The workflow keeps the repository's Node.js 22.22.2 baseline and
+installs the exact npm CLI version 11.15.0 during every release verification
+run, including tag-push dry runs. It verifies the installed version before
+continuing. The protected publication job installs and verifies the same
+version again on its own runner. Update that pin deliberately and keep it at
+or above npm's published trusted-publishing minimum. Neither job configures
+`registry-url` or a `NODE_AUTH_TOKEN`; the public npm CLI package is installed
+from the default public registry, and the publish operation authenticates
+through OIDC.
+
+Release permissions are separated by job. The verification job has
+`contents: read` only. The npm publication job has `id-token: write` only and is gated by the
+`npm-production` environment approval.
+The GitHub Release job runs only after npm publication succeeds and has
+`contents: write` only. This keeps OIDC credentials out of verification and
+GitHub Release creation, and keeps repository write permission out of npm
+publication.
 
 The workflow also fails unless the tagged commit is an ancestor of
 `origin/main`, so a tag created on an unmerged commit cannot be verified or
-published. Its actions are pinned to full commit SHAs, and the resolved tarball
-path reaches shell commands through an environment variable rather than direct
-interpolation. Update the pinned SHAs deliberately when upgrading an action.
+published. Its actions are pinned to full commit SHAs, and the resolved
+tarball path reaches shell commands through an environment variable rather
+than direct interpolation. Update the pinned SHAs deliberately when upgrading
+an action. CI and CodeQL workflows follow the same full-SHA pinning policy.
 
 Protect the `main` branch and restrict creation of `v*` tags to release
 maintainers. Require successful CI before merging release preparation changes.
@@ -110,3 +131,10 @@ update the changelog, and rerun the dry run. If npm publication succeeds but
 GitHub Release creation fails, do not attempt to republish the same version;
 create the GitHub Release for the already-published tag after confirming the
 npm package contents and provenance.
+
+The verified tarball and release notes are kept as a workflow artifact for seven
+days, named by run ID only. Re-running failed jobs reuses that artifact, so a
+failed GitHub Release job can be re-run without republishing. If the artifact
+has expired after npm publication succeeded, create the GitHub Release manually
+from the changelog section; do not dispatch the workflow again, because npm will
+reject the duplicate version.
