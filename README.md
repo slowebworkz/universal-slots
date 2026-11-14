@@ -16,7 +16,7 @@ UniversalSlots defines framework-neutral composition policies and provides frame
 
 ## Development
 
-Requirements: Node.js >=22.13.0 and pnpm 12.
+Requirements: Node.js >=22.22.2 and pnpm 12.
 
 ```sh
 pnpm install
@@ -86,8 +86,7 @@ own typed composition APIs without introducing consumer-specific dependencies
 into UniversalSlots. See
 [the TypeScript composition design](./docs/design/typescript-composition.md).
 
-See [ROADMAP.md](./ROADMAP.md) for the project plan and
-[polymorphic composition semantics](./docs/design/polymorphic-composition.md)
+See [polymorphic composition semantics](./docs/design/polymorphic-composition.md)
 for the composition contract.
 
 ## Workspace conventions
@@ -100,7 +99,6 @@ for the composition contract.
 - `apps/*` is intentionally omitted until an actual application is needed.
 
 The current Core and React tarballs are local verification artifacts, not the
-planned public release format. Whatever assembles the single package must keep
-the rule that a public package never depends on a private workspace package:
-internal workspace code is bundled into the published artifact or not shipped.
-See the repository roadmap for the single-package release strategy.
+planned public release format. The published package must never depend on a
+private workspace package: internal workspace output is assembled into the
+public artifact, and workspace-only references are resolved during assembly.

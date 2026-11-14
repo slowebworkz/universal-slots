@@ -1,11 +1,17 @@
 # Package development
 
-> **Distribution direction:** UniversalSlots is intended to publish as one
-> package, `universal-slots`, with Core and framework adapters exposed through
-> subpath exports. The separate `@universal-slots/core` and
-> `@universal-slots/react` tarballs described below are transitional workspace
-> verification artifacts. They are not independent release candidates. US-009b.6
-> will replace this two-tarball test workflow with one assembled root tarball.
+> **Proposed distribution contract:** The proposed public package boundary,
+> exports, dependency policy, workspace locations, and packed-file allowlist
+> are documented in [the single-package distribution contract](./design/distribution-contract.md).
+> The proposal is one public package, `universal-slots`, with
+> `universal-slots/core` and `universal-slots/react` subpath exports.
+>
+> **Transitional tooling:** The separate `@universal-slots/core` and
+> `@universal-slots/react` tarballs described below are temporary workspace
+> verification artifacts, not independent release candidates. They remain in
+> use until US-009b.6.2 and US-009b.6.3 replace them with one assembled root
+> tarball. Do not treat the transitional tarballs or their `0.0.0` versions as
+> the public release contract.
 
 ## Build the workspace
 

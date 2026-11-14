@@ -1,5 +1,16 @@
 # Package boundary validation
 
+The proposed single-package distribution contract is documented in
+[distribution-contract.md](./distribution-contract.md). It defines
+`universal-slots` as the public package, with `universal-slots/core` and
+`universal-slots/react` subpath exports. Core and React remain separate
+implementation workspaces, but their outputs will be assembled into one root
+package; neither workspace is an independent release candidate.
+
+The current two-workspace tarball checks below are transitional validation
+for the implementation boundaries. They remain useful until the assembled
+root-package verification replaces them in US-009b.6.2 and US-009b.6.3.
+
 The core policy tests import `mergeCompositionProps` through the public
 `@universal-slots/core` source entry point (`packages/core/src/index.ts`). The
 React runtime tests import `Slot` through the public React source entry point
