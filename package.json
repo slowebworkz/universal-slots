@@ -1,10 +1,7 @@
 {
   "name": "universal-slots",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "packageManager": "pnpm@12.18.0",
-  "engines": {
-    "node": ">=22.22.2"
-  },
   "scripts": {
     "build": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && pnpm typecheck && node scripts/assemble-package.mjs",
     "clean": "turbo run clean && rm -rf dist artifacts",
@@ -42,7 +39,7 @@
     "vitest": "catalog:"
   },
   "type": "module",
-  "description": "Framework-neutral composition policies and framework adapters for polymorphic UI composition.",
+  "description": "Framework-neutral composition policies and a React adapter for polymorphic UI composition.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -82,5 +79,18 @@
     "@types/react": {
       "optional": true
     }
-  }
+  },
+  "homepage": "https://github.com/slowebworkz/universal-slots#readme",
+  "bugs": {
+    "url": "https://github.com/slowebworkz/universal-slots/issues"
+  },
+  "keywords": [
+    "polymorphic",
+    "component-composition",
+    "composition",
+    "slots",
+    "as-child",
+    "react",
+    "typescript"
+  ]
 }

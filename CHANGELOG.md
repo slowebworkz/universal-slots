@@ -20,3 +20,16 @@ are added when a version is prepared; do not publish a version with only an
 ### Fixed
 
 ### Security
+
+## [0.1.0] - 2026-11-14
+
+### Added
+
+- Publish the framework-neutral composition API from `universal-slots/core`,
+  including `mergeCompositionProps`, configurable class, style, and event
+  policies, and the `MergeCompositionProps` type projection.
+- Publish the experimental React 19 `Slot` adapter from `universal-slots/react`,
+  including composed event handlers and refs, configurable composition
+  policies, and React-specific target prop and ref types.
+- Provide a single ESM package with separate Core and React subpath exports,
+  bundled TypeScript declarations, and optional React peer dependencies.

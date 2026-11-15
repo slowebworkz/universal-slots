@@ -4,7 +4,37 @@ Universal slot composition technology for modern UI frameworks.
 
 UniversalSlots defines framework-neutral composition policies and provides framework adapters that implement them without pretending that every framework has identical slot or projection semantics.
 
-> **Status:** Experimental React 19 adapter in development. Public APIs and behavior are not yet stable.
+> **Status:** Initial experimental release. Public APIs and behavior are not yet stable; the React adapter targets React 19.
+
+## Installation
+
+Install the package once and import the framework-neutral API or the React
+adapter through its public subpaths:
+
+```sh
+pnpm add universal-slots
+```
+
+The Core entrypoint has no React peer requirement:
+
+```ts
+import { mergeCompositionProps } from "universal-slots/core";
+```
+
+The React entrypoint requires React 19 in the consuming application. TypeScript
+consumers should also have the matching React type declarations installed:
+
+```sh
+pnpm add react@^19 universal-slots
+pnpm add -D @types/react@^19
+```
+
+```tsx
+import { Slot } from "universal-slots/react";
+```
+
+React is an optional peer dependency of the package, so Core-only consumers do
+not need to install React.
 
 ## Goals
 
@@ -25,6 +55,7 @@ pnpm run pack
 pnpm lint
 pnpm test
 pnpm typecheck
+pnpm verify:package
 ```
 
 ## Shared core
@@ -38,6 +69,25 @@ separate Core and adapter releases.
 The core implementation has no dependency on Praxis-kit or any UI framework.
 Praxis-kit and other component libraries can consume UniversalSlots and adapt
 their own higher-level component contracts to these primitives.
+
+The Core API merges props contributed by a composing source with props
+owned by the target that remains responsible for rendering. Ordinary target
+values take precedence, class strings are concatenated, style objects are
+shallowly merged with target values taking precedence, and recognized event
+handlers are composed target-first then source by default.
+
+```ts
+import { mergeCompositionProps } from "universal-slots/core";
+
+const merged = mergeCompositionProps(
+  { className: "button", title: "source" },
+  { className: "link", title: "target" },
+  { isEventHandler: (name) => /^on[A-Z]/.test(name) },
+);
+
+// merged.className === "button link"
+// merged.title === "target"
+```
 
 ## React adapter
 
