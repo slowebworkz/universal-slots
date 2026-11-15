@@ -1,0 +1,40 @@
+packages:
+  - "lib/*"
+  - "packages/*"
+allowBuilds:
+  esbuild: false
+publicHoistPattern:
+  - "*esbuild*"
+
+# Default catalog: versions shared by more than one workspace package.
+# Root-only tools (husky, lint-staged, turbo, prettier) are pinned in package.json.
+catalog:
+  "@eslint/js": ^10.0.1
+  "@testing-library/react": ^16.3.0
+  "@types/react": ^19.0.0
+  "@types/react-dom": ^19.0.0
+  eslint: ^10.14.0
+  jsdom: ^31.0.0
+  react: ^19.0.0
+  react-dom: ^19.0.0
+  remeda: ^2.59.0
+  type-fest: ^5.10.0
+  typescript-eslint: ^8.72.2
+  vitest: ^5.1.0
+  # Held on the 6.x line. TS 7 breaks `turbo lint`/`typecheck` because typescript-eslint
+  # declares a `typescript: >=4.8.4 <6.1.0` peer range ("does not support TS 7.0").
+  # Use the `typescript7` named catalog below to try 7 in a single package.
+  typescript: ^6.0.3
+
+# Named catalogs: opt in per package with `"typescript": "catalog:typescript7"`.
+catalogs:
+  typescript7:
+    typescript: ^7.0.2
+minimumReleaseAgeExclude:
+  - "@turbo/darwin-64@2.11.11"
+  - "@turbo/darwin-arm64@2.11.11"
+  - "@turbo/linux-64@2.11.11"
+  - "@turbo/linux-arm64@2.11.11"
+  - "@turbo/windows-64@2.11.11"
+  - "@turbo/windows-arm64@2.11.11"
+  - turbo@2.11.11

@@ -1,0 +1,42 @@
+{
+  "name": "@universal-slots/react",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "React integration for UniversalSlots.",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "catalog:"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@testing-library/react": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "jsdom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "dependencies": {
+    "@universal-slots/core": "workspace:*",
+    "remeda": "catalog:"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "private": true
+}

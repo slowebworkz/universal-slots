@@ -1,0 +1,175 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to npm and create a GitHub Release; otherwise validate only
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify release candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      # Exercise the public npm install and version check on every release run.
+      # No registry-url is configured, so no placeholder NODE_AUTH_TOKEN is written.
+      - name: Install and verify trusted-publishing-compatible npm CLI
+        env:
+          NPM_CLI_VERSION: 11.15.0
+        run: |
+          npm install --global "npm@$NPM_CLI_VERSION"
+          actual_version="$(npm --version)"
+          if [[ "$actual_version" != "$NPM_CLI_VERSION" ]]; then
+            echo "Expected npm $NPM_CLI_VERSION, got $actual_version." >&2
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Require the tagged commit to be on main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Tag $GITHUB_REF_NAME points to a commit that is not on main." >&2
+            exit 1
+          fi
+
+      - name: Validate release tag and changelog
+        run: |
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+            echo "Release validation must run from a version tag." >&2
+            exit 1
+          fi
+          node scripts/validate-release.mjs --tag "$GITHUB_REF_NAME" > release-notes.md
+
+      - name: Verify packed package
+        run: pnpm verify:package
+
+      - name: Resolve package tarball
+        id: package
+        run: echo "path=$(node scripts/print-package-tarball.mjs)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified release artifact
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ github.run_id }}
+          path: |
+            ${{ steps.package.outputs.path }}
+            release-notes.md
+          if-no-files-found: error
+          retention-days: 7
+          # Keyed by run ID only so "Re-run failed jobs" (a new attempt that skips
+          # verify) can still download it; overwrite allows a full re-run.
+          overwrite: true
+
+  publish:
+    name: Publish verified package to npm
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: npm-production
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.22.2
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-${{ github.run_id }}
+          path: .
+
+      # This job has no registry-url or NODE_AUTH_TOKEN; npm authenticates via OIDC.
+      - name: Install and verify trusted-publishing-compatible npm CLI
+        env:
+          NPM_CLI_VERSION: 11.15.0
+        run: |
+          npm install --global "npm@$NPM_CLI_VERSION"
+          actual_version="$(npm --version)"
+          if [[ "$actual_version" != "$NPM_CLI_VERSION" ]]; then
+            echo "Expected npm $NPM_CLI_VERSION, got $actual_version." >&2
+            exit 1
+          fi
+
+      - name: Resolve verified package tarball
+        id: package
+        run: |
+          mapfile -t tarballs < <(find artifacts -maxdepth 1 -type f -name '*.tgz' -print)
+          if [[ "${#tarballs[@]}" -ne 1 ]]; then
+            echo "Expected exactly one verified package tarball; found ${#tarballs[@]}." >&2
+            exit 1
+          fi
+          # The ./ prefix stops npm from reading it as a GitHub owner/repo shorthand.
+          echo "path=./${tarballs[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish package to npm
+        env:
+          PACKAGE_TARBALL: ${{ steps.package.outputs.path }}
+        run: npm publish "$PACKAGE_TARBALL" --access public --provenance
+
+  github-release:
+    name: Create GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-${{ github.run_id }}
+          path: .
+
+      - name: Resolve verified package tarball
+        id: package
+        run: |
+          mapfile -t tarballs < <(find artifacts -maxdepth 1 -type f -name '*.tgz' -print)
+          if [[ "${#tarballs[@]}" -ne 1 ]]; then
+            echo "Expected exactly one verified package tarball; found ${#tarballs[@]}." >&2
+            exit 1
+          fi
+          # The ./ prefix stops npm from reading it as a GitHub owner/repo shorthand.
+          echo "path=./${tarballs[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # This job has no checkout, so gh cannot infer the repository from git.
+          GH_REPO: ${{ github.repository }}
+          PACKAGE_TARBALL: ${{ steps.package.outputs.path }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          "$PACKAGE_TARBALL"
+          --verify-tag
+          --title "$GITHUB_REF_NAME"
+          --notes-file release-notes.md

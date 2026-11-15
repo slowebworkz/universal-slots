@@ -1,0 +1,96 @@
+{
+  "name": "universal-slots",
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.18.0",
+  "scripts": {
+    "build": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && pnpm typecheck && node scripts/assemble-package.mjs",
+    "clean": "turbo run clean && rm -rf dist artifacts",
+    "dev": "turbo run dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "turbo run lint && eslint eslint.config.ts vitest.config.ts scripts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm -r typecheck",
+    "prepare": "husky",
+    "pack": "pnpm build && node scripts/pack-package.mjs",
+    "check:package": "publint --strict .",
+    "verify:package": "pnpm run pack && pnpm check:package && node scripts/verify-consumer.mjs",
+    "release:check": "node scripts/validate-release.mjs"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": "prettier --write"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "husky": "^9.1.7",
+    "jiti": "^2.7.0",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "publint": "^0.3.25",
+    "turbo": "^2.11.11",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "type": "module",
+  "description": "Framework-neutral composition policies and a React adapter for polymorphic UI composition.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slowebworkz/universal-slots.git"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "docs/design/polymorphic-composition.md",
+    "docs/design/react-slot-semantics.md",
+    "docs/design/typescript-composition.md"
+  ],
+  "exports": {
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    }
+  },
+  "dependencies": {
+    "type-fest": "^5.10.0",
+    "remeda": "^2.59.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "@types/react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    }
+  },
+  "homepage": "https://github.com/slowebworkz/universal-slots#readme",
+  "bugs": {
+    "url": "https://github.com/slowebworkz/universal-slots/issues"
+  },
+  "keywords": [
+    "polymorphic",
+    "component-composition",
+    "composition",
+    "slots",
+    "as-child",
+    "react",
+    "typescript"
+  ]
+}
