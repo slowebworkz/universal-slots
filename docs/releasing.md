@@ -91,8 +91,10 @@ long-lived npm token in GitHub Actions.
 npm trusted publishing requires npm CLI 11.5.1 or later and Node.js 22.14.0
 or later. The workflow keeps the repository's Node.js 22.22.2 baseline and
 installs the exact npm CLI version 11.15.0 during every release verification
-run, including tag-push dry runs. It verifies the installed version before
-continuing. The protected publication job installs and verifies the same
+run, including tag-push dry runs. It installs that version into a separate
+directory on `PATH` instead of upgrading the runner's bundled npm in place,
+because the in-place upgrade fails on Node 22 runners. It verifies the
+installed version before continuing. The protected publication job installs and verifies the same
 version again on its own runner. Update that pin deliberately and keep it at
 or above npm's published trusted-publishing minimum. Neither job configures
 `registry-url` or a `NODE_AUTH_TOKEN`; the public npm CLI package is installed
