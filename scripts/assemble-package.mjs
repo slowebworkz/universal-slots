@@ -1,12 +1,14 @@
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url));
 const distDir = join(rootDir, "dist");
 const workspaces = [
   { name: "core", source: join(rootDir, "lib/core/dist") },
+  { name: "adapter-utils", source: join(rootDir, "lib/adapter-utils/dist") },
   { name: "react", source: join(rootDir, "lib/react/dist") },
+  { name: "preact", source: join(rootDir, "lib/preact/dist") },
 ];
 
 async function listFiles(directory) {
@@ -38,18 +40,32 @@ for (const workspace of workspaces) {
   });
 }
 
-// React is developed against the private Core workspace package. Rewrite that
-// internal specifier in emitted JavaScript and declarations to the public
-// package self-reference exposed by the root export map.
-const reactFiles = await listFiles(join(distDir, "react"));
-for (const path of reactFiles) {
-  if (!/\.(?:js|mjs|cjs|d\.ts)$/.test(path)) continue;
-  const source = await readFile(path, "utf8");
-  const output = source.replaceAll(
-    "@universal-slots/core",
-    "universal-slots/core",
-  );
-  if (output !== source) await writeFile(path, output);
+// Internal workspaces are developed against private package names. Rewrite
+// those specifiers in emitted JavaScript and declarations. Core is public, so
+// it maps to the root export map's self-reference. Adapter utilities are
+// private: they have no export-map entry, so adapters reach them through a
+// relative path inside the published `dist` tree.
+const adapterUtilsEntry = join(distDir, "adapter-utils", "index.js");
+for (const workspace of ["adapter-utils", "react", "preact"]) {
+  const files = await listFiles(join(distDir, workspace));
+  for (const path of files) {
+    if (!/\.(?:js|mjs|cjs|d\.ts)$/.test(path)) continue;
+    const source = await readFile(path, "utf8");
+    let output = source.replaceAll(
+      "@universal-slots/core",
+      "universal-slots/core",
+    );
+    if (workspace !== "adapter-utils") {
+      const relativeEntry = relative(dirname(path), adapterUtilsEntry)
+        .split("\\")
+        .join("/");
+      output = output.replaceAll(
+        "@universal-slots/adapter-utils",
+        relativeEntry.startsWith(".") ? relativeEntry : `./${relativeEntry}`,
+      );
+    }
+    if (output !== source) await writeFile(path, output);
+  }
 }
 
 const emittedFiles = await listFiles(distDir);
@@ -58,6 +74,7 @@ for (const path of emittedFiles) {
   const source = await readFile(path, "utf8");
   if (
     source.includes("@universal-slots/core") ||
+    source.includes("@universal-slots/adapter-utils") ||
     /(?:workspace:|catalog:|link:|file:)/.test(source)
   ) {
     throw new Error(
@@ -66,4 +83,6 @@ for (const path of emittedFiles) {
   }
 }
 
-console.log("\nAssembled public package outputs in dist/core and dist/react.");
+console.log(
+  "\nAssembled public package outputs in dist/core, dist/react, dist/preact, and private dist/adapter-utils.",
+);

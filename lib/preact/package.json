@@ -1,0 +1,41 @@
+{
+  "name": "@universal-slots/preact",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Preact integration for UniversalSlots.",
+  "license": "MIT",
+  "peerDependencies": {
+    "preact": "catalog:"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@universal-slots/conformance": "workspace:*",
+    "jsdom": "catalog:",
+    "preact": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@universal-slots/adapter-utils": "workspace:*",
+    "@universal-slots/core": "workspace:*",
+    "remeda": "catalog:"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "private": true
+}

@@ -42,7 +42,7 @@ export interface MergeCompositionPropsOptions {
 }
 
 /** A trimmed, non-empty class string, or `undefined` for anything else. */
-function normalizeClass(value: unknown): string | undefined {
+export function normalizeClass(value: unknown): string | undefined {
   if (!isString(value)) return undefined;
 
   const trimmed = value.trim();
@@ -60,14 +60,30 @@ function mergeClassValues(sourceValue: unknown, targetValue: unknown): unknown {
   return targetClass ?? sourceClass;
 }
 
-function isStyleObject(value: unknown): value is Record<string, unknown> {
+/** A non-null, non-array object: the shape core merges as a style record. */
+export function isStyleObject(
+  value: unknown,
+): value is Record<string, unknown> {
   return isObjectType(value) && !isArray(value);
 }
 
-function assertStyleObject(value: unknown): void {
-  if (!isNullish(value) && !isStyleObject(value)) {
-    throw new TypeError("Composition style values must be objects or nullish.");
+/** Throws a `TypeError` unless `value` is nullish or accepted by `isAllowed`. */
+export function assertNullishOr(
+  value: unknown,
+  isAllowed: (value: unknown) => boolean,
+  message: string,
+): void {
+  if (!isNullish(value) && !isAllowed(value)) {
+    throw new TypeError(message);
   }
+}
+
+function assertStyleObject(value: unknown): void {
+  assertNullishOr(
+    value,
+    isStyleObject,
+    "Composition style values must be objects or nullish.",
+  );
 }
 
 function mergeStyleObjects(

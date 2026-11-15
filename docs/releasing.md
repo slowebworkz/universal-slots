@@ -1,8 +1,8 @@
 # Releasing UniversalSlots
 
 UniversalSlots is released as one npm package: `universal-slots`. The root
-`package.json` is the only version source; Core and React are released together
-through the same package version. Do not publish the private workspace
+`package.json` is the only version source; Core, React, and Preact are released
+together through the same package version. Do not publish the private workspace
 packages independently.
 
 ## Version policy

@@ -4,7 +4,7 @@ Universal slot composition technology for modern UI frameworks.
 
 UniversalSlots defines framework-neutral composition policies and provides framework adapters that implement them without pretending that every framework has identical slot or projection semantics.
 
-> **Status:** Initial experimental release. Public APIs and behavior are not yet stable; the React adapter targets React 19.
+> **Status:** Initial experimental release. Public APIs and behavior are not yet stable; the React adapter targets React 19 and the Preact adapter targets Preact 11.
 
 ## Installation
 
@@ -35,6 +35,37 @@ import { Slot } from "universal-slots/react";
 
 React is an optional peer dependency of the package, so Core-only consumers do
 not need to install React.
+
+## Preact adapter
+
+The experimental Preact adapter targets Preact 11. Install Preact alongside the
+package and import the dedicated subpath:
+
+```sh
+pnpm add preact@^11 universal-slots
+```
+
+```tsx
+import { Slot } from "universal-slots/preact";
+
+function Button({ asChild, children, ...props }) {
+  return asChild ? (
+    <Slot {...props}>{children}</Slot>
+  ) : (
+    <button {...props}>{children}</button>
+  );
+}
+```
+
+The adapter uses Preact's VNode and ref behavior directly; it does not require
+`preact/compat`. It accepts one non-Fragment VNode child. Preact CSS strings and
+signal-like class/style values are passed through with target precedence;
+object style pairs are shallowly merged. The adapter does not synthesize
+combined Signals; supply a custom policy when signal-aware composition is
+required. It also exports `PreactTargetProps`, `PreactTargetRef`,
+`PreactCompositionProps`, and `PreactEventKey` for typed adapter integrations. See the
+[Preact Slot semantics](./docs/design/preact-slot-semantics.md) for the full
+behavior and compatibility limits.
 
 ## Goals
 
@@ -91,8 +122,8 @@ const merged = mergeCompositionProps(
 
 ## React adapter
 
-The initial React adapter exposes a low-level `Slot` composition primitive. The
-import below shows the planned public subpath after US-009b.6 consolidation:
+The React adapter exposes a low-level `Slot` composition primitive through the
+current public subpath:
 
 ```tsx
 import { Slot } from "universal-slots/react";
@@ -143,12 +174,12 @@ for the composition contract. Run `pnpm run pack` to create a local tarball.
 ## Workspace conventions
 
 - The intended public distribution is one root package: `universal-slots`.
-- `lib/*` is reserved for private internal workspaces; current Core and React
-  workspace packages are transitional implementation/build boundaries.
+- `lib/*` is reserved for private internal workspaces; Core, React, and Preact
+  workspace packages are implementation/build boundaries.
 - `packages/*` is reserved for a future independently publishable product only
   when there is a concrete need for one.
 - `apps/*` is intentionally omitted until an actual application is needed.
 
-Core and React are private implementation workspaces. Their build outputs are
-assembled into the single public package, and workspace-only references are
-rewritten during assembly.
+Core, React, and Preact are private implementation workspaces. Their build
+outputs are assembled into the single public package, and workspace-only
+references are rewritten during assembly.

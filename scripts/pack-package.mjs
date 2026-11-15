@@ -17,6 +17,8 @@ for (const entrypoint of [
   "core/index.d.ts",
   "react/index.js",
   "react/index.d.ts",
+  "preact/index.js",
+  "preact/index.d.ts",
 ]) {
   await readFile(join(rootDir, "dist", entrypoint)).catch(() => {
     throw new Error(
@@ -53,6 +55,8 @@ const required = [
   "package/dist/core/index.d.ts",
   "package/dist/react/index.js",
   "package/dist/react/index.d.ts",
+  "package/dist/preact/index.js",
+  "package/dist/preact/index.d.ts",
 ];
 for (const file of required) {
   if (!files.includes(file)) {
@@ -68,6 +72,7 @@ const allowedFiles = new Set([
   "package/docs/design/polymorphic-composition.md",
   "package/docs/design/react-slot-semantics.md",
   "package/docs/design/typescript-composition.md",
+  "package/docs/design/preact-slot-semantics.md",
 ]);
 const unexpected = files.filter(
   (file) =>

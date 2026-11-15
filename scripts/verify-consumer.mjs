@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, URL } from "node:url";
 
@@ -188,6 +189,16 @@ try {
         }
         if (reactAvailable) {
           throw new Error("React was unexpectedly installed in the Core-only consumer.");
+        }
+        let preactAvailable = false;
+        try {
+          import.meta.resolve("preact");
+          preactAvailable = true;
+        } catch {
+          // Preact is also intentionally absent from this consumer.
+        }
+        if (preactAvailable) {
+          throw new Error("Preact was unexpectedly installed in the Core-only consumer.");
         }
 
         const calls = [];
@@ -401,8 +412,129 @@ try {
   run("node", ["runtime.mjs"], reactDir);
   typecheck(reactDir);
 
+  // Preact consumer verifies the public adapter without React installed.
+  // VERIFY_PREACT_VERSION installs another Preact release, so the advertised
+  // minimum (for example 11.0.0) can be checked, not only the locked version.
+  const preact =
+    process.env.VERIFY_PREACT_VERSION ?? readLockedCatalogVersion("preact");
+  const jsdom = readLockedCatalogVersion("jsdom");
+  const preactPinned = { ...pinned, preact, jsdom };
+  const preactDir = await createConsumer(
+    "preact",
+    { preact, jsdom, typescript },
+    {
+      "runtime.mjs": `
+        import { JSDOM } from "jsdom";
+        import { h, render } from "preact";
+        import { Slot } from "universal-slots/preact";
+
+        let reactAvailable = false;
+        try {
+          import.meta.resolve("react");
+          reactAvailable = true;
+        } catch {
+          // The Preact adapter must not require React.
+        }
+        if (reactAvailable) {
+          throw new Error("React was unexpectedly installed in the Preact consumer.");
+        }
+
+        const dom = new JSDOM("<!doctype html><html><body></body></html>");
+        globalThis.window = dom.window;
+        globalThis.document = dom.window.document;
+        const container = document.createElement("div");
+        document.body.append(container);
+        const calls = [];
+
+        render(
+          h(
+            Slot,
+            {
+              className: "source-class",
+              style: { color: "blue", padding: "4px" },
+              onClick: () => calls.push("source"),
+            },
+            h(
+              "button",
+              {
+                className: "target-class",
+                style: { color: "red", margin: "2px" },
+                onClick: () => calls.push("target"),
+              },
+              "consumer",
+            ),
+          ),
+          container,
+        );
+
+        const button = container.querySelector("button");
+        if (!button || button.className !== "source-class target-class") {
+          throw new Error("Preact Slot class composition failed.");
+        }
+        if (button.style.color !== "red" || button.style.padding !== "4px") {
+          throw new Error("Preact Slot style composition failed.");
+        }
+        button.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+        if (calls.join(",") !== "target,source") {
+          throw new Error("Preact Slot event composition failed: " + calls.join(","));
+        }
+
+        render(null, container);
+        dom.window.close();
+      `,
+      "consumer.ts": `
+        import { h } from "preact";
+        import { Slot } from "universal-slots/preact";
+        import type { Ref } from "preact";
+        import type {
+          PreactCompositionProps,
+          PreactEventKey,
+          PreactTargetRef,
+          SlotProps,
+        } from "universal-slots/preact";
+
+        type Equal<Left, Right> =
+          (<Value>() => Value extends Left ? 1 : 2) extends
+          (<Value>() => Value extends Right ? 1 : 2) ? true : false;
+        type Expect<Value extends true> = Value;
+
+        type Source = { className: string; style: string; onPress: (event: { x: number }) => void };
+        type Target = { className?: string; style?: { color: string }; onPress: (event: { x: number }) => void };
+        type Props = PreactCompositionProps<Source, Target>;
+        type ClassAcceptsSignal = Expect<import("preact").Signalish<string | undefined> extends Props["className"] ? true : false>;
+        type StyleAcceptsString = Expect<string extends Props["style"] ? true : false>;
+        type StyleAcceptsSignal = Expect<import("preact").Signalish<string | import("preact").CSSProperties | undefined> extends Props["style"] ? true : false>;
+        type EventKey = Expect<"onClick" extends PreactEventKey ? true : false>;
+        type AnchorRef = Expect<Ref<HTMLAnchorElement> extends PreactTargetRef<"a"> ? true : false>;
+
+        const props: SlotProps<"a"> = {
+          href: "/docs",
+          children: h("a", { href: "/docs" }, "docs"),
+        };
+        const wrongRef: SlotProps<"a"> = {
+          // @ts-expect-error Anchor Slot refs must not accept a button ref.
+          ref: null as unknown as Ref<HTMLButtonElement>,
+        };
+        // @ts-expect-error Preact class values are strings or signal-like strings.
+        const invalidClass: Props["className"] = 42;
+        // @ts-expect-error Preact style values are CSS strings, objects, or signals.
+        const invalidStyle: Props["style"] = 42;
+
+        void Slot;
+        void props;
+        void wrongRef;
+        void invalidClass;
+        void invalidStyle;
+        type _Assertions = [ClassAcceptsSignal, StyleAcceptsString, StyleAcceptsSignal, EventKey, AnchorRef];
+      `,
+    },
+    preactPinned,
+  );
+  run("node", ["runtime.mjs"], preactDir);
+  typecheck(preactDir);
+
   console.log(
-    "\nPacked package passed Core-only and React runtime/declaration checks.",
+    "\nPacked package passed Core-only, React, and Preact runtime/declaration checks.",
   );
 } finally {
   await Promise.all(

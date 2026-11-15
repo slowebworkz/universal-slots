@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@universal-slots/conformance": "workspace:*",
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
@@ -23,6 +24,7 @@
     "react-dom": "catalog:"
   },
   "dependencies": {
+    "@universal-slots/adapter-utils": "workspace:*",
     "@universal-slots/core": "workspace:*",
     "remeda": "catalog:"
   },

@@ -1,4 +1,9 @@
-export { mergeCompositionProps } from "./composition/merge-props.js";
+export {
+  assertNullishOr,
+  isStyleObject,
+  mergeCompositionProps,
+  normalizeClass,
+} from "./composition/merge-props.js";
 
 export type {
   CompositionProps,
