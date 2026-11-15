@@ -4,6 +4,7 @@ import type {
   ElementType,
 } from "react";
 
+import type { EventKey } from "@universal-slots/adapter-utils";
 import type { MergeCompositionProps } from "@universal-slots/core";
 
 /** Props declared by a React intrinsic element or component target. */
@@ -24,7 +25,7 @@ export type ReactTargetRef<Target extends ElementType> = Target extends unknown
   : never;
 
 /** React's event-handler prop naming convention: `on` followed by a capital. */
-export type ReactEventKey = `on${Capitalize<string>}`;
+export type ReactEventKey = EventKey;
 
 /** Event-handler keys across every member of a props union. */
 type ReactEventKeys<Props> = Props extends unknown

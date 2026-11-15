@@ -11,6 +11,10 @@ are added when a version is prepared; do not publish a version with only an
 
 ### Added
 
+- Add an experimental Preact 11 adapter at `universal-slots/preact`, with
+  Preact-native VNode cloning, ref composition, and signal-aware class/style
+  value pass-through.
+
 ### Changed
 
 ### Deprecated

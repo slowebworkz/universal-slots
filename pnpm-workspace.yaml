@@ -6,7 +6,7 @@ allowBuilds:
 publicHoistPattern:
   - "*esbuild*"
 
-# Default catalog: versions shared by more than one workspace package.
+# Default catalog: shared workspace versions and package-consumer test pins.
 # Root-only tools (husky, lint-staged, turbo, prettier) are pinned in package.json.
 catalog:
   "@eslint/js": ^10.0.1
@@ -15,6 +15,7 @@ catalog:
   "@types/react-dom": ^19.0.0
   eslint: ^10.14.0
   jsdom: ^31.0.0
+  preact: ^11.2.0
   react: ^19.0.0
   react-dom: ^19.0.0
   remeda: ^2.59.0

@@ -1,9 +1,10 @@
 # Package boundary validation
 
-The public distribution is one `universal-slots` package with two explicit
-subpath exports: `universal-slots/core` and `universal-slots/react`. Core and
-React remain private implementation workspaces under `lib/`; neither is an
-independent release candidate. See the
+The public distribution is one `universal-slots` package with three explicit
+subpath exports: `universal-slots/core`, `universal-slots/react`, and
+`universal-slots/preact`. Core and the framework adapters remain private
+implementation workspaces under `lib/`; none is an independent release
+candidate. See the
 [single-package distribution contract](./distribution-contract.md).
 
 ## Workspace boundaries
@@ -11,28 +12,29 @@ independent release candidate. See the
 - `lib/core` owns framework-neutral composition policies and public Core
   source.
 - `lib/react` owns React-specific element, event, and ref behavior.
-- React depends on Core through the private `@universal-slots/core` workspace
-  package during development and build.
+- `lib/preact` owns Preact-specific VNode, event, and ref behavior.
+- React and Preact depend on Core through the private
+  `@universal-slots/core` workspace package during development and build.
 - The root package owns the union of public runtime dependencies and optional
-  React peer dependencies.
+  React and Preact peer dependencies.
 
-Core's runtime and type source has no React, other framework, or Praxis-kit
-imports. Framework event recognition and ref/lifecycle behavior remain in the
-React adapter.
+Core's runtime and type source has no React, Preact, or Praxis-kit imports.
+Framework event recognition and ref/lifecycle behavior remain in their
+respective adapters.
 
 ## Build assembly
 
-`pnpm build` builds Core before React, then runs
+`pnpm build` builds Core before React and Preact, then runs
 `scripts/assemble-package.mjs`. The assembler copies the emitted workspace
-outputs into `dist/core` and `dist/react` and rewrites the React output's
-`@universal-slots/core` specifier to the public self-reference
+outputs into `dist/core`, `dist/react`, and `dist/preact` and rewrites each
+adapter's `@universal-slots/core` specifier to the public self-reference
 `universal-slots/core` in both JavaScript and declaration files. It rejects
 unresolved workspace protocol references in the assembled output.
 
 The root export map points only to the generated JavaScript and declaration
 entrypoints. The root manifest declares the concrete union of runtime
-dependencies (`type-fest` and `remeda`) and optional React peers. Internal
-workspace manifests are private and are not included in the public package.
+dependencies (`type-fest` and `remeda`) and optional React and Preact peers.
+Internal workspace manifests are private and are not included in the public package.
 
 ## Package contents
 
@@ -44,14 +46,18 @@ included.
 
 `pnpm verify:package` runs strict `publint` and verifies the packed tarball in
 isolated external consumers. Consumer dependency versions are read from the
-resolved default catalog in `pnpm-lock.yaml`, and installation runs offline. The
-package's own `type-fest` and `remeda` dependencies keep their semver ranges, but
-each consumer pins them to the locked versions with `pnpm-workspace.yaml`
-overrides and fails if a different version resolves.
+resolved default catalog in `pnpm-lock.yaml`; installation prefers the local
+pnpm store but can fall back to the registry when packages or metadata are not
+cached. The package's own `type-fest` and `remeda` dependencies keep their
+semver ranges, but each consumer pins them to the locked versions with
+`pnpm-workspace.yaml` overrides and fails if a different version resolves.
+
 The Core-only consumer checks class, style, event, and ordinary-prop merging
-without React installed, plus exact declaration assertions and negative cases.
-The React consumer renders the packaged `Slot` with `react-dom/server` and
-checks composed class, style, and event-handler output, then compiles the public
-declarations. These checks are the first implementation slice of US-009b.6.3.
+without React or Preact installed, plus exact declaration assertions and
+negative cases. The React consumer renders the packaged `Slot` with
+`react-dom/server` and checks composed class, style, and event-handler output.
+The Preact consumer renders the packaged `Slot` into a jsdom document without
+React installed and checks class, style, and event composition. All consumers
+compile public declaration checks. The Preact consumer check is part of US-010.
 Release policy, tag validation, and publication automation are covered by
 US-009b.6.4; see [the release process](../releasing.md).

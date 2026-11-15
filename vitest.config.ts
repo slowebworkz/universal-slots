@@ -7,6 +7,12 @@ export default defineConfig({
   // build. This alias is workspace-only; published packages never ship `src`.
   resolve: {
     alias: {
+      "@universal-slots/conformance": fileURLToPath(
+        new URL("./lib/conformance/src/index.ts", import.meta.url),
+      ),
+      "@universal-slots/adapter-utils": fileURLToPath(
+        new URL("./lib/adapter-utils/src/index.ts", import.meta.url),
+      ),
       "@universal-slots/core": fileURLToPath(
         new URL("./lib/core/src/index.ts", import.meta.url),
       ),
