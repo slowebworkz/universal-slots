@@ -1,34 +1,28 @@
+import {
+  composeRefs,
+  isEventHandler,
+  pickCompositionPolicies,
+} from "@universal-slots/adapter-utils";
 import { mergeCompositionProps } from "@universal-slots/core";
-import { isFunction, isNonNullish, isNullish } from "remeda";
-import { cloneElement, Fragment, isValidElement, useMemo } from "react";
-
-import type { MergeEventPolicy, MergeValuePolicy } from "@universal-slots/core";
-import type {
-  ElementType,
-  ReactElement,
-  ReactNode,
-  Ref,
-  RefCallback,
+import { isNonNullish } from "remeda";
+import {
+  cloneElement,
+  forwardRef,
+  Fragment,
+  isValidElement,
+  useMemo,
+  version,
 } from "react";
+
+import type {
+  ComposableRef,
+  SlotCompositionOptions,
+} from "@universal-slots/adapter-utils";
+import type { ElementType, ReactElement, ReactNode, Ref } from "react";
 
 import type { ReactTargetRef } from "./types.js";
 
-/**
- * Any ref a React 19 element can carry: an object ref, or a callback ref that
- * may return a cleanup function. `null`/`undefined` mean "no ref".
- */
-type ComposableRef<T> =
-  Ref<T> | ((instance: T | null) => void | (() => void)) | null | undefined;
-
-/** Optional framework-neutral policies that customize React Slot composition. */
-export interface SlotCompositionOptions {
-  /** Override how distinct recognized event handlers are composed. */
-  mergeEvent?: MergeEventPolicy;
-  /** Override class/className value handling for framework-specific values. */
-  mergeClass?: MergeValuePolicy;
-  /** Override style value handling for framework-specific style models. */
-  mergeStyle?: MergeValuePolicy;
-}
+export type { SlotCompositionOptions };
 
 /**
  * Props accepted by the low-level Slot primitive.
@@ -38,110 +32,38 @@ export interface SlotCompositionOptions {
  * when a target-specific ref type is required, e.g. `Slot<"a">` or
  * `Slot<typeof Link>`.
  */
-export type SlotProps<Target extends ElementType = ElementType> = Record<
-  string,
-  unknown
-> & {
+export type SlotProps<Target extends ElementType = ElementType> =
+  SlotPropsWithoutRef & {
+    ref?: ReactTargetRef<Target>;
+  };
+
+/**
+ * Slot props without `ref`. Declared directly because `Omit` on the open prop
+ * bag would collapse it to an index signature and widen `children` to `unknown`.
+ */
+type SlotPropsWithoutRef = Record<string, unknown> & {
   children?: ReactNode;
   composition?: SlotCompositionOptions;
-  ref?: ReactTargetRef<Target>;
 };
 
 /** Message of the error thrown when `children` is not a single, non-fragment element. */
 const slotError =
   "UniversalSlots Slot expects exactly one non-fragment React element child.";
 
-/**
- * Classifies React event-handler props: `on` followed by a capital letter.
- * Keep in step with the `ReactEventKey` type in `types.ts`, which mirrors this
- * convention at the type level.
- */
-function isEventHandler(name: string): boolean {
-  return /^on[A-Z]/.test(name);
-}
+const usesLegacyElementRef = Number.parseInt(version, 10) === 18;
 
-/**
- * Maps each composed callback to the original refs it applies, so nested
- * compositions can flatten and deduplicate by original ref identity. Weakly
- * keyed so composed callbacks can still be garbage collected.
- */
-const composedSources = new WeakMap<object, readonly ComposableRef<never>[]>();
+/** Read the child ref from the location used by the installed React major. */
+function getTargetRef(children: ReactNode): ComposableRef<unknown> {
+  if (!isValidElement(children)) return undefined;
 
-/**
- * Expands any previously composed ref back into the original refs it applies,
- * so nested compositions deduplicate by original ref identity.
- */
-function flattenRefs<T>(refs: ComposableRef<T>[]): ComposableRef<T>[] {
-  return refs.flatMap((ref) =>
-    typeof ref === "function" && composedSources.has(ref)
-      ? (composedSources.get(ref) as ComposableRef<T>[])
-      : [ref],
-  );
-}
+  if (usesLegacyElementRef) {
+    // React 18 stores refs on the element; React 19 moves them into props.
+    // Keep this structural to avoid depending on deprecated React 19 typings.
+    return (children as unknown as { ref?: ComposableRef<unknown> }).ref;
+  }
 
-/**
- * Combines several refs into one callback ref.
- *
- * Each distinct ref is assigned once. Attaching returns a once-only cleanup
- * that detaches every ref: callback refs that return their own cleanup use it,
- * those that do not are called with `null`, and object refs are reset to
- * `null`. Detaching (`instance === null`) returns nothing, because there is
- * nothing left to clean up.
- */
-function composeRefs<T>(...refs: ComposableRef<T>[]): RefCallback<T> {
-  // The same ref can be contributed by several composition layers. Treat ref
-  // identity as the unit of composition so it is assigned and cleaned up once.
-  const uniqueRefs = [...new Set(flattenRefs(refs))];
-
-  const composed: RefCallback<T> = (instance) => {
-    const cleanups: (() => void)[] = [];
-
-    for (const ref of uniqueRefs) {
-      if (isNullish(ref)) continue;
-
-      if (typeof ref === "function") {
-        const cleanup = ref(instance);
-
-        if (isFunction(cleanup)) {
-          // React 19 callback ref with its own cleanup.
-          cleanups.push(cleanup);
-        } else if (instance !== null) {
-          // Callback ref without a cleanup: React calls it with `null` on detach.
-          cleanups.push(() => {
-            ref(null);
-          });
-        }
-      } else {
-        // Object ref: assign now, reset on cleanup.
-        ref.current = instance;
-
-        if (instance !== null) {
-          cleanups.push(() => {
-            ref.current = null;
-          });
-        }
-      }
-    }
-
-    // Detach call: refs were already updated above and nothing remains to clean.
-    if (instance === null) return;
-
-    // Makes the cleanup idempotent: later calls do nothing.
-    let cleaned = false;
-
-    return () => {
-      if (cleaned) return;
-      cleaned = true;
-
-      for (const cleanup of cleanups) {
-        cleanup();
-      }
-    };
-  };
-
-  // Record the originals so an outer composition can flatten this one.
-  composedSources.set(composed, uniqueRefs as ComposableRef<never>[]);
-  return composed;
+  return (children.props as Record<string, unknown>)
+    .ref as ComposableRef<unknown>;
 }
 
 /**
@@ -151,34 +73,40 @@ function composeRefs<T>(...refs: ComposableRef<T>[]): RefCallback<T> {
  * This is a low-level primitive. Component libraries can build APIs such as
  * `asChild` on top of it.
  *
- * Requires React 19: the target's own ref is read from `children.props.ref`,
- * where `ref` is an ordinary prop. React 18 keeps it on the element instead.
+ * Supports React 18 and 19. The target ref is read from the location used by
+ * the installed React major, then composed with the Slot ref when both exist.
  */
-export function Slot<Target extends ElementType = ElementType>({
-  children,
-  ref: slotRef,
-  composition,
-  ...slotProps
-}: SlotProps<Target>) {
+function SlotImpl(
+  { children, composition, ...slotProps }: SlotPropsWithoutRef,
+  forwardedRef: Ref<unknown>,
+) {
+  const slotRef = forwardedRef as ComposableRef<unknown>;
   // Hooks run before validation so the hook order never depends on a throw.
-  //
-  // React 19 exposes the target's own ref as `props.ref`. `props` is untyped on
-  // a generic element, hence the casts on the refs here and below: the target's
-  // ref type is only known at the call site.
-  const targetRef = isValidElement(children)
-    ? ((children.props as Record<string, unknown>)
-        .ref as ComposableRef<unknown>)
-    : undefined;
   // Memoized so React does not detach and re-attach both refs on every
   // re-render. With only one ref present there is nothing to compose, and a
   // lone target ref already survives in the merged props.
-  const composedRef = useMemo(
-    () =>
-      isNonNullish(slotRef) && isNonNullish(targetRef)
-        ? composeRefs(slotRef as ComposableRef<unknown>, targetRef)
-        : (slotRef as ComposableRef<unknown>),
-    [slotRef, targetRef],
-  );
+  const targetRef = getTargetRef(children);
+  const composedRef = useMemo(() => {
+    if (isNonNullish(slotRef) && isNonNullish(targetRef)) {
+      const composed = composeRefs(
+        slotRef as ComposableRef<unknown>,
+        targetRef,
+      );
+
+      // React 18 does not support callback-ref cleanup functions: it warns when
+      // a callback ref returns one. Discard the cleanup and rely on React 18
+      // calling the ref with `null` on detach, which detaches every original ref.
+      return usesLegacyElementRef
+        ? (instance: unknown) => {
+            composed(instance);
+          }
+        : composed;
+    }
+
+    // React 18 does not retain the child's ref in target.props, so even a lone
+    // target ref must be passed explicitly when cloning the element.
+    return (slotRef ?? targetRef) as ComposableRef<unknown>;
+  }, [slotRef, targetRef]);
 
   if (!isValidElement(children) || children.type === Fragment) {
     throw new Error(slotError);
@@ -190,15 +118,7 @@ export function Slot<Target extends ElementType = ElementType>({
     isEventHandler,
     // Pick known options explicitly so untyped input cannot override
     // event classification or other core options.
-    ...(isNonNullish(composition?.mergeEvent) && {
-      mergeEvent: composition.mergeEvent,
-    }),
-    ...(isNonNullish(composition?.mergeClass) && {
-      mergeClass: composition.mergeClass,
-    }),
-    ...(isNonNullish(composition?.mergeStyle) && {
-      mergeStyle: composition.mergeStyle,
-    }),
+    ...pickCompositionPolicies(composition),
   });
 
   // Use the slot ref, or the slot and target refs composed. This replaces any
@@ -210,3 +130,13 @@ export function Slot<Target extends ElementType = ElementType>({
   // Clone rather than wrap so the target keeps its type, key and identity.
   return cloneElement(target, mergedProps);
 }
+
+/**
+ * Forward the Slot ref explicitly so the same public API works on React 18,
+ * where function components do not receive `ref` as an ordinary prop.
+ */
+export const Slot = forwardRef(SlotImpl) as unknown as <
+  Target extends ElementType = ElementType,
+>(
+  props: SlotProps<Target>,
+) => ReactElement;

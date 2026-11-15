@@ -1,0 +1,19 @@
+{
+  "name": "@universal-slots/conformance",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Private framework-agnostic Slot conformance suite shared by the adapters.",
+  "license": "MIT",
+  "dependencies": {
+    "vitest": "catalog:"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "private": true
+}

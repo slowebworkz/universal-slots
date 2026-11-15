@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { mergeCompositionProps } from "../index.js";
+import {
+  assertNullishOr,
+  isStyleObject,
+  mergeCompositionProps,
+  normalizeClass,
+} from "../index.js";
 
 const isEventHandler = (name: string) => /^on[A-Z]/.test(name);
 
@@ -420,5 +425,37 @@ describe("mergeCompositionProps", () => {
 
     expect(sourceProps).toEqual(sourceBefore);
     expect(targetProps).toEqual(targetBefore);
+  });
+});
+
+describe("isStyleObject", () => {
+  it("accepts non-null, non-array objects only", () => {
+    expect(isStyleObject({ color: "red" })).toBe(true);
+    expect(isStyleObject({})).toBe(true);
+    expect(isStyleObject([])).toBe(false);
+    expect(isStyleObject(null)).toBe(false);
+    expect(isStyleObject("color: red")).toBe(false);
+  });
+});
+
+describe("normalizeClass", () => {
+  it("trims strings and drops empty or non-string values", () => {
+    expect(normalizeClass("  a b  ")).toBe("a b");
+    expect(normalizeClass("   ")).toBeUndefined();
+    expect(normalizeClass(42)).toBeUndefined();
+    expect(normalizeClass(undefined)).toBeUndefined();
+  });
+});
+
+describe("assertNullishOr", () => {
+  it("passes nullish and allowed values and throws otherwise", () => {
+    const isNumber = (value: unknown) => typeof value === "number";
+
+    expect(() => assertNullishOr(undefined, isNumber, "bad")).not.toThrow();
+    expect(() => assertNullishOr(null, isNumber, "bad")).not.toThrow();
+    expect(() => assertNullishOr(1, isNumber, "bad")).not.toThrow();
+    expect(() => assertNullishOr("1", isNumber, "bad")).toThrow(
+      new TypeError("bad"),
+    );
   });
 });

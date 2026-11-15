@@ -1,0 +1,31 @@
+{
+  "name": "@universal-slots/adapter-utils",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Private helpers shared by the UniversalSlots framework adapters.",
+  "license": "MIT",
+  "dependencies": {
+    "@universal-slots/core": "workspace:*",
+    "remeda": "catalog:"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "types": "./dist/index.d.ts",
+  "private": true
+}

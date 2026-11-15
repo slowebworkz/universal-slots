@@ -216,11 +216,12 @@ Do not create adapter packages or abstractions solely because a framework appear
 
 ## React-specific profile
 
-The existing [React Slot Semantics](./react-slot-semantics.md) document defines a React-specific implementation profile, including React element validation, child-first prop precedence, event composition, class/style merging, and React 19 refs.
+The existing [React Slot Semantics](./react-slot-semantics.md) document defines a React-specific implementation profile, including React element validation, child-first prop precedence, event composition, class/style merging, and React 18/19 ref behavior.
 
 That profile is not itself the framework-neutral contract. As the universal contract is finalized:
 
 - Keep React-only details (React element validation, `key`, React refs, React event conventions) in the React profile.
+- Keep Preact-only details (VNode validation, ref forwarding/cleanup, signal-like class/style values, and Preact event conventions) in the Preact profile.
 - Reconcile any shared behavior with this document explicitly.
 - Record framework-specific divergences rather than generalizing React behavior without evidence.
 - Treat the current React profile as proposed until reviewed against this model.

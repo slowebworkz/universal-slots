@@ -1,9 +1,9 @@
 {
   "name": "universal-slots",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packageManager": "pnpm@12.18.0",
   "scripts": {
-    "build": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && pnpm typecheck && node scripts/assemble-package.mjs",
+    "build": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && pnpm --filter @universal-slots/adapter-utils clean && pnpm --filter @universal-slots/adapter-utils build && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && pnpm --filter @universal-slots/preact clean && pnpm --filter @universal-slots/preact build && pnpm typecheck && node scripts/assemble-package.mjs",
     "clean": "turbo run clean && rm -rf dist artifacts",
     "dev": "turbo run dev",
     "format": "prettier --write .",
@@ -15,6 +15,7 @@
     "prepare": "husky",
     "pack": "pnpm build && node scripts/pack-package.mjs",
     "check:package": "publint --strict .",
+    "verify:package:preact-min": "pnpm run pack && VERIFY_PREACT_VERSION=11.0.0 node scripts/verify-consumer.mjs",
     "verify:package": "pnpm run pack && pnpm check:package && node scripts/verify-consumer.mjs",
     "release:check": "node scripts/validate-release.mjs"
   },
@@ -39,7 +40,7 @@
     "vitest": "catalog:"
   },
   "type": "module",
-  "description": "Framework-neutral composition policies and a React adapter for polymorphic UI composition.",
+  "description": "Framework-neutral composition policies with React and Preact adapters.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -52,7 +53,8 @@
     "README.md",
     "docs/design/polymorphic-composition.md",
     "docs/design/react-slot-semantics.md",
-    "docs/design/typescript-composition.md"
+    "docs/design/typescript-composition.md",
+    "docs/design/preact-slot-semantics.md"
   ],
   "exports": {
     "./core": {
@@ -62,6 +64,10 @@
     "./react": {
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js"
+    },
+    "./preact": {
+      "types": "./dist/preact/index.d.ts",
+      "import": "./dist/preact/index.js"
     }
   },
   "dependencies": {
@@ -69,14 +75,18 @@
     "remeda": "^2.59.0"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "@types/react": "^19.0.0"
+    "react": "^18.0.0 || ^19.0.0",
+    "@types/react": "^18.0.0 || ^19.0.0",
+    "preact": "^11.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
       "optional": true
     },
     "@types/react": {
+      "optional": true
+    },
+    "preact": {
       "optional": true
     }
   },
@@ -91,6 +101,7 @@
     "slots",
     "as-child",
     "react",
-    "typescript"
+    "typescript",
+    "preact"
   ]
 }

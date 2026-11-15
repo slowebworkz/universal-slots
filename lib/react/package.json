@@ -5,7 +5,7 @@
   "description": "React integration for UniversalSlots.",
   "license": "MIT",
   "peerDependencies": {
-    "react": "catalog:"
+    "react": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@universal-slots/conformance": "workspace:*",
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
@@ -23,6 +24,7 @@
     "react-dom": "catalog:"
   },
   "dependencies": {
+    "@universal-slots/adapter-utils": "workspace:*",
     "@universal-slots/core": "workspace:*",
     "remeda": "catalog:"
   },

@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, URL } from "node:url";
 
@@ -188,6 +189,16 @@ try {
         }
         if (reactAvailable) {
           throw new Error("React was unexpectedly installed in the Core-only consumer.");
+        }
+        let preactAvailable = false;
+        try {
+          import.meta.resolve("preact");
+          preactAvailable = true;
+        } catch {
+          // Preact is also intentionally absent from this consumer.
+        }
+        if (preactAvailable) {
+          throw new Error("Preact was unexpectedly installed in the Core-only consumer.");
         }
 
         const calls = [];
@@ -401,8 +412,313 @@ try {
   run("node", ["runtime.mjs"], reactDir);
   typecheck(reactDir);
 
+  // React 18 uses legacy element.ref storage and requires forwardRef for Slot.
+  // Keep this consumer independent from the workspace's React 19 dev catalog.
+  const react18Pinned = {
+    ...pinned,
+    react: "18.3.1",
+    "react-dom": "18.3.1",
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.7",
+    jsdom: readLockedCatalogVersion("jsdom"),
+  };
+  const react18Dir = await createConsumer(
+    "react18",
+    {
+      react: react18Pinned.react,
+      "react-dom": react18Pinned["react-dom"],
+      "@types/react": react18Pinned["@types/react"],
+      "@types/react-dom": react18Pinned["@types/react-dom"],
+      jsdom: react18Pinned.jsdom,
+      typescript,
+    },
+    {
+      "runtime.mjs": `
+        import { JSDOM } from "jsdom";
+        import React, { createRef } from "react";
+        import { Slot } from "universal-slots/react";
+
+        const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>');
+        globalThis.window = dom.window;
+        globalThis.document = dom.window.document;
+        globalThis.HTMLElement = dom.window.HTMLElement;
+        globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+        const { act } = React;
+        const { createRoot } = await import("react-dom/client");
+
+        // React 18 warns when a callback ref returns a function, so record
+        // console errors and assert none concern callback-ref return values.
+        const consoleErrors = [];
+        const originalError = console.error;
+        console.error = (...args) => {
+          consoleErrors.push(args.map(String).join(" "));
+        };
+
+        const slotRef = createRef();
+        let childInstance = null;
+        const childRef = (instance) => { childInstance = instance; };
+        const slotCallbackCalls = [];
+        const slotCallbackRef = (instance) => { slotCallbackCalls.push(instance); };
+        const root = createRoot(document.getElementById("root"));
+        act(() => {
+          root.render(
+            React.createElement(
+              Slot,
+              { ref: slotRef, title: "from-slot" },
+              React.createElement("button", { ref: childRef }, "React 18"),
+            ),
+          );
+        });
+
+        const target = document.querySelector("button");
+        if (!target || slotRef.current !== target || childInstance !== target) {
+          throw new Error("React 18 Slot did not compose both legacy refs.");
+        }
+        if (target.getAttribute("title") !== "from-slot") {
+          throw new Error("React 18 Slot did not forward contributed props.");
+        }
+        act(() => root.unmount());
+        if (slotRef.current !== null || childInstance !== null) {
+          throw new Error("React 18 Slot did not clear refs on detach.");
+        }
+
+        // A callback ref on the Slot is attached once and detached with null.
+        const callbackRoot = createRoot(document.getElementById("root"));
+        act(() => {
+          callbackRoot.render(
+            React.createElement(
+              Slot,
+              { ref: slotCallbackRef },
+              React.createElement("button", { ref: childRef }, "React 18"),
+            ),
+          );
+        });
+        const callbackTarget = document.querySelector("button");
+        if (slotCallbackCalls.length !== 1 || slotCallbackCalls[0] !== callbackTarget) {
+          throw new Error("React 18 Slot did not attach a callback ref once.");
+        }
+        act(() => callbackRoot.unmount());
+        if (slotCallbackCalls.length !== 2 || slotCallbackCalls[1] !== null) {
+          throw new Error("React 18 Slot callback ref did not receive null on detach.");
+        }
+
+        // The composed ref handed to the target must satisfy React 18's callback
+        // contract directly: attaching returns nothing, and a later null call
+        // detaches every original ref. The target does not forward the ref to
+        // the DOM, so the test drives it by hand.
+        let composedRef = null;
+        const CaptureTarget = React.forwardRef((props, ref) => {
+          composedRef = ref;
+          return React.createElement("button", props);
+        });
+        const captureSlotRef = createRef();
+        let captureChild = null;
+        const captureRoot = createRoot(document.getElementById("root"));
+        act(() => {
+          captureRoot.render(
+            React.createElement(
+              Slot,
+              { ref: captureSlotRef },
+              React.createElement(CaptureTarget, {
+                ref: (instance) => { captureChild = instance; },
+              }),
+            ),
+          );
+        });
+        if (typeof composedRef !== "function") {
+          throw new Error("React 18 Slot did not pass a composed callback ref.");
+        }
+        const manualNode = document.createElement("div");
+        const attachResult = composedRef(manualNode);
+        if (attachResult !== undefined) {
+          throw new Error("React 18 composed ref returned a value on attach.");
+        }
+        if (captureSlotRef.current !== manualNode || captureChild !== manualNode) {
+          throw new Error("React 18 composed ref did not attach both refs.");
+        }
+        const detachResult = composedRef(null);
+        if (detachResult !== undefined) {
+          throw new Error("React 18 composed ref returned a value on detach.");
+        }
+        if (captureSlotRef.current !== null || captureChild !== null) {
+          throw new Error("React 18 composed ref did not detach both refs on null.");
+        }
+        act(() => captureRoot.unmount());
+
+        // A target-only ref must survive cloning too. React 18 stores this ref
+        // on the element rather than in target.props.
+        const targetOnlyRef = createRef();
+        // An unmounted root cannot render again, so use a fresh one.
+        const secondRoot = createRoot(document.getElementById("root"));
+        act(() => {
+          secondRoot.render(
+            React.createElement(
+              Slot,
+              null,
+              React.createElement("button", { ref: targetOnlyRef }, "Target only"),
+            ),
+          );
+        });
+        if (targetOnlyRef.current !== document.querySelector("button")) {
+          throw new Error("React 18 Slot dropped a target-only ref.");
+        }
+        act(() => secondRoot.unmount());
+        if (targetOnlyRef.current !== null) {
+          throw new Error("React 18 Slot did not clear a target-only ref.");
+        }
+        console.error = originalError;
+        const callbackRefWarnings = consoleErrors.filter((message) =>
+          message.includes("callback ref"),
+        );
+        if (callbackRefWarnings.length > 0) {
+          throw new Error(
+            "React 18 Slot emitted a callback-ref warning: " + callbackRefWarnings.join("; "),
+          );
+        }
+        dom.window.close();
+      `,
+      "consumer.ts": `
+        import { createRef } from "react";
+        import type { SlotProps } from "universal-slots/react";
+
+        const anchorRef = createRef<HTMLAnchorElement>();
+        const valid: SlotProps<"a"> = { ref: anchorRef, href: "/docs" };
+        const invalid: SlotProps<"button"> = {
+          // @ts-expect-error An anchor ref cannot be used for a button target.
+          ref: anchorRef,
+        };
+        void valid;
+        void invalid;
+      `,
+    },
+    react18Pinned,
+  );
+  run("node", ["runtime.mjs"], react18Dir);
+  typecheck(react18Dir);
+
+  // Preact consumer verifies the public adapter without React installed.
+  // VERIFY_PREACT_VERSION installs another Preact release, so the advertised
+  // minimum (for example 11.0.0) can be checked, not only the locked version.
+  const preact =
+    process.env.VERIFY_PREACT_VERSION ?? readLockedCatalogVersion("preact");
+  const jsdom = readLockedCatalogVersion("jsdom");
+  const preactPinned = { ...pinned, preact, jsdom };
+  const preactDir = await createConsumer(
+    "preact",
+    { preact, jsdom, typescript },
+    {
+      "runtime.mjs": `
+        import { JSDOM } from "jsdom";
+        import { h, render } from "preact";
+        import { Slot } from "universal-slots/preact";
+
+        let reactAvailable = false;
+        try {
+          import.meta.resolve("react");
+          reactAvailable = true;
+        } catch {
+          // The Preact adapter must not require React.
+        }
+        if (reactAvailable) {
+          throw new Error("React was unexpectedly installed in the Preact consumer.");
+        }
+
+        const dom = new JSDOM("<!doctype html><html><body></body></html>");
+        globalThis.window = dom.window;
+        globalThis.document = dom.window.document;
+        const container = document.createElement("div");
+        document.body.append(container);
+        const calls = [];
+
+        render(
+          h(
+            Slot,
+            {
+              className: "source-class",
+              style: { color: "blue", padding: "4px" },
+              onClick: () => calls.push("source"),
+            },
+            h(
+              "button",
+              {
+                className: "target-class",
+                style: { color: "red", margin: "2px" },
+                onClick: () => calls.push("target"),
+              },
+              "consumer",
+            ),
+          ),
+          container,
+        );
+
+        const button = container.querySelector("button");
+        if (!button || button.className !== "source-class target-class") {
+          throw new Error("Preact Slot class composition failed.");
+        }
+        if (button.style.color !== "red" || button.style.padding !== "4px") {
+          throw new Error("Preact Slot style composition failed.");
+        }
+        button.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+        if (calls.join(",") !== "target,source") {
+          throw new Error("Preact Slot event composition failed: " + calls.join(","));
+        }
+
+        render(null, container);
+        dom.window.close();
+      `,
+      "consumer.ts": `
+        import { h } from "preact";
+        import { Slot } from "universal-slots/preact";
+        import type { Ref } from "preact";
+        import type {
+          PreactCompositionProps,
+          PreactEventKey,
+          PreactTargetRef,
+          SlotProps,
+        } from "universal-slots/preact";
+
+        type Equal<Left, Right> =
+          (<Value>() => Value extends Left ? 1 : 2) extends
+          (<Value>() => Value extends Right ? 1 : 2) ? true : false;
+        type Expect<Value extends true> = Value;
+
+        type Source = { className: string; style: string; onPress: (event: { x: number }) => void };
+        type Target = { className?: string; style?: { color: string }; onPress: (event: { x: number }) => void };
+        type Props = PreactCompositionProps<Source, Target>;
+        type ClassAcceptsSignal = Expect<import("preact").Signalish<string | undefined> extends Props["className"] ? true : false>;
+        type StyleAcceptsString = Expect<string extends Props["style"] ? true : false>;
+        type StyleAcceptsSignal = Expect<import("preact").Signalish<string | import("preact").CSSProperties | undefined> extends Props["style"] ? true : false>;
+        type EventKey = Expect<"onClick" extends PreactEventKey ? true : false>;
+        type AnchorRef = Expect<Ref<HTMLAnchorElement> extends PreactTargetRef<"a"> ? true : false>;
+
+        const props: SlotProps<"a"> = {
+          href: "/docs",
+          children: h("a", { href: "/docs" }, "docs"),
+        };
+        const wrongRef: SlotProps<"a"> = {
+          // @ts-expect-error Anchor Slot refs must not accept a button ref.
+          ref: null as unknown as Ref<HTMLButtonElement>,
+        };
+        // @ts-expect-error Preact class values are strings or signal-like strings.
+        const invalidClass: Props["className"] = 42;
+        // @ts-expect-error Preact style values are CSS strings, objects, or signals.
+        const invalidStyle: Props["style"] = 42;
+
+        void Slot;
+        void props;
+        void wrongRef;
+        void invalidClass;
+        void invalidStyle;
+        type _Assertions = [ClassAcceptsSignal, StyleAcceptsString, StyleAcceptsSignal, EventKey, AnchorRef];
+      `,
+    },
+    preactPinned,
+  );
+  run("node", ["runtime.mjs"], preactDir);
+  typecheck(preactDir);
+
   console.log(
-    "\nPacked package passed Core-only and React runtime/declaration checks.",
+    "\nPacked package passed Core-only, React, and Preact runtime/declaration checks.",
   );
 } finally {
   await Promise.all(
