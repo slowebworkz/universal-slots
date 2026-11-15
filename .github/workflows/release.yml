@@ -43,8 +43,12 @@ jobs:
         env:
           NPM_CLI_VERSION: 11.15.0
         run: |
-          npm install --global "npm@$NPM_CLI_VERSION"
-          actual_version="$(npm --version)"
+          # Install into a separate prefix: upgrading the runner's bundled npm in
+          # place fails with MODULE_NOT_FOUND (promise-retry) on Node 22.
+          npm_cli_dir="$RUNNER_TEMP/npm-cli"
+          npm install --prefix "$npm_cli_dir" "npm@$NPM_CLI_VERSION"
+          echo "$npm_cli_dir/node_modules/.bin" >> "$GITHUB_PATH"
+          actual_version="$("$npm_cli_dir/node_modules/.bin/npm" --version)"
           if [[ "$actual_version" != "$NPM_CLI_VERSION" ]]; then
             echo "Expected npm $NPM_CLI_VERSION, got $actual_version." >&2
             exit 1
@@ -114,8 +118,12 @@ jobs:
         env:
           NPM_CLI_VERSION: 11.15.0
         run: |
-          npm install --global "npm@$NPM_CLI_VERSION"
-          actual_version="$(npm --version)"
+          # Install into a separate prefix: upgrading the runner's bundled npm in
+          # place fails with MODULE_NOT_FOUND (promise-retry) on Node 22.
+          npm_cli_dir="$RUNNER_TEMP/npm-cli"
+          npm install --prefix "$npm_cli_dir" "npm@$NPM_CLI_VERSION"
+          echo "$npm_cli_dir/node_modules/.bin" >> "$GITHUB_PATH"
+          actual_version="$("$npm_cli_dir/node_modules/.bin/npm" --version)"
           if [[ "$actual_version" != "$NPM_CLI_VERSION" ]]; then
             echo "Expected npm $NPM_CLI_VERSION, got $actual_version." >&2
             exit 1
