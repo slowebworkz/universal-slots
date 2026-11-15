@@ -146,11 +146,15 @@ async function createConsumer(name, dependencies, files, pinned) {
     await writeFile(join(directory, fileName), contents);
   }
 
+  // Prefer the local store and metadata cache, but fall back to the registry:
+  // a cold cache (a fresh CI runner or a tag-triggered release run) has no
+  // cached metadata, and a strict --offline install fails with
+  // ERR_PNPM_NO_OFFLINE_META. Direct and shared dependencies are pinned above.
   run(
     "pnpm",
     [
       "install",
-      "--offline",
+      "--prefer-offline",
       "--ignore-scripts",
       "--config.auto-install-peers=false",
     ],
