@@ -3,6 +3,8 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: false
+publicHoistPattern:
+  - "*esbuild*"
 
 # Default catalog: versions shared by more than one workspace package.
 # Root-only tools (husky, lint-staged, turbo, prettier) are pinned in package.json.
