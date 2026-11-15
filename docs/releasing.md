@@ -19,7 +19,7 @@ Use Semantic Versioning for the root package:
 - Keep Core and every adapter on the same version. A change to any public
   subpath is a change to the root package.
 - The intended first public release is `0.1.0`, reflecting the experimental
-  status of the current API and React 19 adapter. Do not create that version or
+  status of the current API and React adapter (then targeting React 19). Do not create that version or
   publish it as part of ordinary development work; prepare and approve the
   first release separately.
 - The automated release workflow accepts stable `vMAJOR.MINOR.PATCH` tags

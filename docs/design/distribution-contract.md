@@ -136,19 +136,19 @@ part of the published runtime.
 The root public manifest owns the union of dependencies required by the
 public subpaths.
 
-| Section            | Dependency     | Range     | Reason                                                      |
-| ------------------ | -------------- | --------- | ----------------------------------------------------------- |
-| `dependencies`     | `type-fest`    | `^5.10.0` | Public Core declarations import its types                   |
-| `dependencies`     | `remeda`       | `^2.59.0` | Core and the framework adapters import runtime utilities    |
-| `peerDependencies` | `react`        | `^19.0.0` | Required when using the React subpath                       |
-| `peerDependencies` | `@types/react` | `^19.0.0` | Required for TypeScript consumers of the React declarations |
-| `peerDependencies` | `preact`       | `^11.0.0` | Required when using the experimental Preact subpath         |
+| Section            | Dependency     | Range     | Reason                                                   |
+| ------------------ | -------------- | --------- | -------------------------------------------------------- |
+| `dependencies`     | `type-fest`    | `^5.10.0` | Public Core declarations import its types                |
+| `dependencies`     | `remeda`       | `^2.59.0` | Core and the framework adapters import runtime utilities |
+| `peerDependencies` | `react`        | `^18.0.0  |                                                          | ^19.0.0` | Required when using the React subpath                       |
+| `peerDependencies` | `@types/react` | `^18.0.0  |                                                          | ^19.0.0` | Required for TypeScript consumers of the React declarations |
+| `peerDependencies` | `preact`       | `^11.0.0` | Required when using the experimental Preact subpath      |
 
 React, `@types/react`, and Preact are optional peers at the package level
 because a Core-only consumer must not need to install either framework. A
-consumer using `universal-slots/react` is responsible for installing a
-compatible React 19 runtime; a TypeScript consumer of that subpath also needs
-compatible React type declarations. A consumer using `universal-slots/preact`
+consumer using `universal-slots/react` is responsible for installing React 18
+or React 19; a TypeScript consumer of that subpath also needs matching React
+type declarations. A consumer using `universal-slots/preact`
 installs Preact 11.
 
 `react-dom` is not a public dependency or peer: the adapter does not import it.
