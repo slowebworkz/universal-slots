@@ -1,5 +1,3 @@
-import { isFunction, isNullish } from "remeda";
-
 /**
  * Any ref a framework element can carry: an object ref, or a callback ref that
  * may return a cleanup function. `null`/`undefined` mean "no ref".
@@ -29,7 +27,7 @@ const composedSources = new WeakMap<object, readonly ComposableRef<never>[]>();
  */
 function flattenRefs<T>(refs: ComposableRef<T>[]): ComposableRef<T>[] {
   return refs.flatMap((ref) =>
-    isFunction(ref) && composedSources.has(ref)
+    typeof ref === "function" && composedSources.has(ref)
       ? (composedSources.get(ref) as ComposableRef<T>[])
       : [ref],
   );
@@ -53,12 +51,12 @@ export function composeRefs<T>(...refs: ComposableRef<T>[]): ComposedRef<T> {
     const cleanups: (() => void)[] = [];
 
     for (const ref of uniqueRefs) {
-      if (isNullish(ref)) continue;
+      if (ref === null || ref === undefined) continue;
 
-      if (isFunction(ref)) {
+      if (typeof ref === "function") {
         const cleanup = ref(instance);
 
-        if (isFunction(cleanup)) {
+        if (typeof cleanup === "function") {
           // Callback ref with its own cleanup.
           cleanups.push(cleanup);
         } else if (instance !== null) {

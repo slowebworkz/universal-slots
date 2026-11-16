@@ -7,7 +7,6 @@ export {
 
 export type {
   CompositionProps,
-  EventCompositionPolicy,
   EventHandlerClassifier,
   MergeCompositionPropsOptions,
   MergeEventPolicy,

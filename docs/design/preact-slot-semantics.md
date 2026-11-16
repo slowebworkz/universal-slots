@@ -37,20 +37,12 @@ forwarding for function-component targets and does not claim Preact 10 support.
   style values (including numbers and arrays) throw a `TypeError`. Supply
   `composition.mergeStyle` for application-specific signal-aware composition.
 - Event props are recognized by `/^on[A-Z]/` and are composed target-first,
-  then source, using Core's default `chain` policy. `preventDefault()` does not
-  suppress the source handler by default. Set
-  `composition.eventPolicy: "skip-source-on-default-prevented"` to skip the
-  source handler when the target handler leaves a truthy `defaultPrevented`
-  property on its first argument. Missing, nullish, primitive, or otherwise
-  non-prevented arguments do not suppress the source handler.
-- An explicit `composition.mergeEvent` takes precedence over `eventPolicy` and
-  can implement any custom event composition behavior.
+  then source, using Core's default policy. `preventDefault()` does not suppress
+  the source handler. Supply `composition.mergeEvent` to override this behavior.
 - The adapter deduplicates identical handler references through Core.
 
 `composition.mergeClass` and `composition.mergeStyle` can replace the default
 class and style policies. These options use the same policy signatures as Core.
-The event policy options are also framework-neutral and are shared with the
-React adapter.
 
 ## Refs
 

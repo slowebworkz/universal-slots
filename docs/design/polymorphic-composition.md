@@ -142,39 +142,27 @@ The core policy engine currently defines:
   `undefined` values.
 - Recognized target and source event handlers run target-first, then source;
   an identical function reference is invoked once, and `preventDefault()` does
-  not suppress the source handler under the default `chain` policy.
+  not suppress the source handler.
 - `class` and `className` string values concatenate source-first, target-last;
   empty or unsupported values are omitted by the core string policy.
 - Style objects are shallow-merged, with target values winning; nullish values
   fall back to the non-nullish value.
 - Non-object, non-nullish style values are rejected by the default policy.
 - Adapters may override class/style _value handling_ for framework-native
-  representations. Event composition can use the built-in `eventPolicy` or a
-  custom `mergeEvent(source, target)`. A custom `mergeEvent` takes precedence
-  when both options are supplied. The custom policy is called only when both
-  values are functions; source-only and target-only values, explicitly
-  undefined target values, and non-function values retain the ordinary behavior.
-  Identical handler references are still invoked once and do not call either
-  policy.
+  representations. They may also supply `mergeEvent(source, target)` to compose
+  two distinct event-handler functions according to their own policy. The policy
+  is called only when both values are functions; source-only and target-only
+  values, explicitly undefined target values, and non-function values retain the
+  ordinary behavior. Identical handler references are still invoked once and do
+  not call the custom policy.
 
-The default event policy is `chain`: target first, then source, without
-cancellation semantics. The opt-in `skip-source-on-default-prevented` policy
-also invokes target first, then invokes source only when the target's first
-argument does not have a truthy `defaultPrevented` property after the target
-handler returns. Missing, nullish, primitive, and otherwise non-prevented first
-arguments do not suppress source. A custom `mergeEvent` can still implement
-source-first or any other behavior. Core receives and forwards opaque values;
-it has no React or SyntheticEvent dependency. For example, a framework adapter
-can select the built-in policy without implementing its own merger:
-
-```ts
-mergeCompositionProps(sourceProps, targetProps, {
-  isEventHandler: (name) => /^on[A-Z]/.test(name),
-  eventPolicy: "skip-source-on-default-prevented",
-});
-```
-
-A custom policy remains available when the built-in choices are insufficient:
+The default event policy remains target-first, then source, without cancellation
+semantics. A consumer that wants source-first execution can supply a policy that
+invokes source before target. A cancellation-aware policy can invoke target first
+and invoke source only when the event has not been default-prevented. The core
+policy receives and forwards opaque values; it has no React or SyntheticEvent
+dependency. For example, a React-facing adapter can provide cancellation-aware
+composition without making the core aware of React event types:
 
 ```ts
 import {
@@ -204,10 +192,10 @@ The adapter may type this boundary more narrowly for its own event model; the
 core contract intentionally keeps the policy signature framework-neutral.
 
 These are UniversalSlots semantics, not an attempt to copy every existing
-consumer's policy. Praxis can now select the built-in cancellation-aware policy
-instead of duplicating its own merger, provided its adapter does not pass an
-internal default `mergeEvent` that would intentionally take precedence. Praxis
-continues to own its class/style normalization behavior.
+consumer's policy. In particular, the current Praxis implementation suppresses
+the composing handler when the target event is default-prevented and has its own
+class/style normalization behavior. Praxis integration must explicitly adapt those differences rather
+than changing the shared contract implicitly.
 
 `universal-slots/core` has no framework or Praxis dependency. Framework
 adapters may depend on it; Praxis and other component libraries may depend on
@@ -339,9 +327,7 @@ identify the affected behavior and explain the limitation.
 
 The following remain intentionally deferred:
 
-- Configurable prop precedence, and event-handler policies beyond the built-in
-  `eventPolicy` values (`"chain"` and `"skip-source-on-default-prevented"`) and
-  the adapter-supplied `mergeEvent` override.
+- Configurable prop precedence or event-handler policies.
 - Arbitrary function-prop composition.
 - Class conflict resolution (including Tailwind-aware merging).
 - Fragment, multiple-target, and non-element target support.
