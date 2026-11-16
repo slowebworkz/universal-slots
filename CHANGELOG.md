@@ -11,10 +11,6 @@ are added when a version is prepared; do not publish a version with only an
 
 ### Added
 
-- Add the opt-in `skip-source-on-default-prevented` event composition policy
-  to Core, React, and Preact while retaining target-first/source-second chaining
-  as the default.
-
 ### Changed
 
 ### Deprecated

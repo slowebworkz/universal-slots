@@ -5,7 +5,6 @@ import { Slot } from "./slot.js";
 import type {
   PreactCompositionProps,
   PreactEventKey,
-  PreactSlotCompositionOptions,
   PreactTargetProps,
   PreactTargetRef,
   SlotProps,
@@ -79,10 +78,6 @@ type ClassTargetRefAcceptance = Expect<
 type AnchorProps = PreactTargetProps<"a">;
 type AnchorHasHref = Expect<"href" extends keyof AnchorProps ? true : false>;
 
-const eventCompositionOptions: PreactSlotCompositionOptions = {
-  eventPolicy: "skip-source-on-default-prevented",
-};
-
 const props: SlotProps<"a"> = {
   href: "/docs",
   children: h("a", { href: "/docs" }, "Documentation"),
@@ -100,7 +95,6 @@ const invalidClass: Props["className"] = 42;
 const invalidStyle: Props["style"] = 42;
 
 void Slot;
-void eventCompositionOptions;
 void props;
 void wrongRef;
 void invalidClass;

@@ -19,7 +19,6 @@ describe("pickCompositionPolicies", () => {
     const mergeEvent = () => undefined;
     const input = {
       mergeEvent,
-      eventPolicy: "skip-source-on-default-prevented" as const,
       mergeStyle: undefined,
       isEventHandler: () => true,
     };
@@ -28,10 +27,7 @@ describe("pickCompositionPolicies", () => {
       pickCompositionPolicies(
         input as unknown as Parameters<typeof pickCompositionPolicies>[0],
       ),
-    ).toStrictEqual({
-      mergeEvent,
-      eventPolicy: "skip-source-on-default-prevented",
-    });
+    ).toStrictEqual({ mergeEvent });
     expect(pickCompositionPolicies(undefined)).toStrictEqual({});
   });
 });
