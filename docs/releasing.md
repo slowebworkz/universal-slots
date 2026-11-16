@@ -18,13 +18,12 @@ Use Semantic Versioning for the root package:
   for breaking public API or behavior changes.
 - Keep Core and every adapter on the same version. A change to any public
   subpath is a change to the root package.
-- The intended first public release is `0.1.0`, reflecting the experimental
-  status of the current API and React 19 adapter. Do not create that version or
-  publish it as part of ordinary development work; prepare and approve the
-  first release separately.
+- The package is pre-1.0 and experimental. Do not bump the version, create a
+  tag, or publish as part of ordinary development work; prepare and approve
+  each release separately.
 - The automated release workflow accepts stable `vMAJOR.MINOR.PATCH` tags
   only. Prerelease identifiers and npm dist-tags such as `next` are not part
-  of the initial automated workflow. Add them only with a separately reviewed
+  of the automated workflow. Add them only with a separately reviewed
   prerelease policy.
 
 ## Changelog policy
@@ -54,8 +53,8 @@ Maintain [`CHANGELOG.md`](../CHANGELOG.md) using Keep a Changelog sections:
 3. Move the relevant `Unreleased` entries into the dated version section in
    `CHANGELOG.md`, then start a new empty `Unreleased` section.
 4. Commit the version and changelog changes to `main`.
-5. Create and push the matching annotated tag, for example `v0.1.0` for
-   package version `0.1.0`.
+5. Create and push the matching annotated tag, for example `v0.3.0` for
+   package version `0.3.0`.
 6. Push the tag. The tag-push workflow validates the tag/changelog match,
    executes `pnpm verify:package`, and resolves the exact tarball, but does not
    publish or create a GitHub Release. This is the automated dry run.
@@ -124,7 +123,7 @@ whether a release is appropriate.
 The automated workflow publishes the exact tarball produced by
 `pnpm verify:package`; it does not rebuild a separate artifact between
 verification and publication. It publishes only the root `universal-slots`
-package. The first public publication remains an explicitly approved action.
+package. Every publication remains an explicitly approved action.
 
 ## Recovery
 

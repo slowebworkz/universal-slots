@@ -26,9 +26,16 @@ function PropProbe({
   );
 }
 
-function CustomCallbackProbe({ onSelectItem }: { onSelectItem?: () => void }) {
+function CustomCallbackProbe({
+  onSelectItem,
+}: {
+  onSelectItem?: (value: string) => void;
+}) {
   return (
-    <button data-testid="custom-callback" onClick={onSelectItem}>
+    <button
+      data-testid="custom-callback"
+      onClick={() => onSelectItem?.("custom")}
+    >
       select
     </button>
   );
@@ -230,6 +237,97 @@ describe("Slot conformance", () => {
 
       expect(childHandler).toHaveBeenCalledOnce();
       expect(slotHandler).not.toHaveBeenCalled();
+    });
+
+    it("skips the slot handler when the child prevents default under the opt-in policy", () => {
+      const slotHandler = vi.fn();
+      const childHandler = vi.fn((event: MouseEvent) => event.preventDefault());
+
+      render(
+        <Slot
+          composition={{ eventPolicy: "skip-source-on-default-prevented" }}
+          onClick={slotHandler}
+        >
+          <button data-testid="target" onClick={childHandler}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(childHandler).toHaveBeenCalledOnce();
+      expect(slotHandler).not.toHaveBeenCalled();
+    });
+
+    it("runs the slot handler when the child does not prevent default under the opt-in policy", () => {
+      const order: string[] = [];
+      const slotHandler = vi.fn(() => order.push("slot"));
+      const childHandler = vi.fn(() => order.push("child"));
+
+      render(
+        <Slot
+          composition={{ eventPolicy: "skip-source-on-default-prevented" }}
+          onClick={slotHandler}
+        >
+          <button data-testid="target" onClick={childHandler}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(order).toEqual(["child", "slot"]);
+    });
+
+    it("does not treat a custom callback argument as default-prevented", () => {
+      const childHandler = vi.fn();
+      const slotHandler = vi.fn();
+
+      render(
+        <Slot
+          composition={{ eventPolicy: "skip-source-on-default-prevented" }}
+          onSelectItem={slotHandler}
+        >
+          <CustomCallbackProbe onSelectItem={childHandler} />
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("custom-callback"));
+
+      expect(childHandler).toHaveBeenCalledWith("custom");
+      expect(slotHandler).toHaveBeenCalledWith("custom");
+    });
+
+    it("gives an explicit mergeEvent precedence over eventPolicy", () => {
+      const slotHandler = vi.fn();
+      const childHandler = vi.fn((event: MouseEvent) => event.preventDefault());
+      const mergeEvent: NonNullable<SlotCompositionOptions["mergeEvent"]> =
+        (source, target) =>
+        (...args: unknown[]) => {
+          (target as (...values: unknown[]) => unknown)(...args);
+          (source as (...values: unknown[]) => unknown)(...args);
+        };
+
+      render(
+        <Slot
+          composition={{
+            eventPolicy: "skip-source-on-default-prevented",
+            mergeEvent,
+          }}
+          onClick={slotHandler}
+        >
+          <button data-testid="target" onClick={childHandler}>
+            target
+          </button>
+        </Slot>,
+      );
+
+      fireEvent.click(screen.getByTestId("target"));
+
+      expect(childHandler).toHaveBeenCalledOnce();
+      expect(slotHandler).toHaveBeenCalledOnce();
     });
 
     it("applies a custom event policy independently to multiple event props", () => {

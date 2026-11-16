@@ -1,6 +1,10 @@
 import { isNonNullish } from "remeda";
 
-import type { MergeEventPolicy, MergeValuePolicy } from "@universal-slots/core";
+import type {
+  EventCompositionPolicy,
+  MergeEventPolicy,
+  MergeValuePolicy,
+} from "@universal-slots/core";
 
 /** Event-handler prop naming convention shared by React and Preact. */
 export type EventKey = `on${Capitalize<string>}`;
@@ -17,6 +21,8 @@ export function isEventHandler(name: string): boolean {
 export interface SlotCompositionOptions {
   /** Override how distinct recognized event handlers are composed. */
   mergeEvent?: MergeEventPolicy;
+  /** Built-in event behavior; an explicit `mergeEvent` takes precedence. */
+  eventPolicy?: EventCompositionPolicy;
   /** Override class/className value handling for framework-specific values. */
   mergeClass?: MergeValuePolicy;
   /** Override style value handling for framework-specific style models. */
@@ -33,6 +39,9 @@ export function pickCompositionPolicies(
   return {
     ...(isNonNullish(composition?.mergeEvent) && {
       mergeEvent: composition.mergeEvent,
+    }),
+    ...(isNonNullish(composition?.eventPolicy) && {
+      eventPolicy: composition.eventPolicy,
     }),
     ...(isNonNullish(composition?.mergeClass) && {
       mergeClass: composition.mergeClass,

@@ -17,6 +17,10 @@ import type {
   SlotProps,
 } from "./index.js";
 
+const eventCompositionOptions: SlotCompositionOptions = {
+  eventPolicy: "skip-source-on-default-prevented",
+};
+
 // ---------------------------------------------------------------------------
 // Fixture components and props
 // ---------------------------------------------------------------------------

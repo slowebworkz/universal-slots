@@ -4,7 +4,7 @@ Universal slot composition technology for modern UI frameworks.
 
 UniversalSlots defines framework-neutral composition policies and provides framework adapters that implement them without pretending that every framework has identical slot or projection semantics.
 
-> **Status:** Initial experimental release. Public APIs and behavior are not yet stable; the React adapter targets React 19 and the Preact adapter targets Preact 11.
+> **Status:** Initial experimental release. Public APIs and behavior are not yet stable; the React adapter supports React 18 and 19, and the Preact adapter targets Preact 11.
 
 ## Installation
 
@@ -21,12 +21,12 @@ The Core entrypoint has no React peer requirement:
 import { mergeCompositionProps } from "universal-slots/core";
 ```
 
-The React entrypoint requires React 19 in the consuming application. TypeScript
-consumers should also have the matching React type declarations installed:
+The React entrypoint supports React 18 and React 19. TypeScript consumers
+should also have matching React type declarations installed:
 
 ```sh
-pnpm add react@^19 universal-slots
-pnpm add -D @types/react@^19
+pnpm add "react@^18 || ^19" universal-slots
+pnpm add -D "@types/react@^18 || ^19"
 ```
 
 ```tsx
@@ -105,7 +105,9 @@ The Core API merges props contributed by a composing source with props
 owned by the target that remains responsible for rendering. Ordinary target
 values take precedence, class strings are concatenated, style objects are
 shallowly merged with target values taking precedence, and recognized event
-handlers are composed target-first then source by default.
+handlers are composed target-first then source by default. The React and
+Preact `Slot` adapters also offer an opt-in `eventPolicy` that skips the source
+handler when the target prevents default; a custom `mergeEvent` takes precedence.
 
 ```ts
 import { mergeCompositionProps } from "universal-slots/core";
@@ -139,7 +141,7 @@ function Button({ asChild, children, ...props }) {
 
 `Slot` composes props and behavior onto one React element while preserving the
 target component. It does not implement a higher-level `asChild` API itself.
-The adapter currently targets React 19.
+The adapter supports React 18 and React 19.
 
 Custom component targets must forward contributed props and the injected ref to
 the element they render. `Slot` cannot forward through a component that consumes
