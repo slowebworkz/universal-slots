@@ -131,6 +131,156 @@ describe("mergeCompositionProps", () => {
     expect(sourceHandler).not.toHaveBeenCalled();
   });
 
+  it("skips the source handler when the target prevents default under the opt-in policy", () => {
+    const sourceHandler = vi.fn();
+    const targetHandler = vi.fn((event: { preventDefault(): void }) => {
+      event.preventDefault();
+    });
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: targetHandler },
+      { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+    );
+    const event = {
+      defaultPrevented: false,
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+    };
+
+    (merged.onClick as (value: typeof event) => void)(event);
+
+    expect(targetHandler).toHaveBeenCalledOnce();
+    expect(sourceHandler).not.toHaveBeenCalled();
+  });
+
+  it("runs both handlers under the opt-in policy when the target does not prevent default", () => {
+    const order: string[] = [];
+    const sourceHandler = vi.fn(() => order.push("source"));
+    const targetHandler = vi.fn(() => order.push("target"));
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: targetHandler },
+      { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+    );
+
+    (merged.onClick as () => void)();
+
+    expect(order).toEqual(["target", "source"]);
+  });
+
+  it.each([{}, null, undefined, "custom", 42, true])(
+    "runs the source handler when the first argument %s has no defaultPrevented flag",
+    (argument) => {
+      const sourceHandler = vi.fn();
+      const targetHandler = vi.fn();
+      const merged = mergeCompositionProps(
+        { onClick: sourceHandler },
+        { onClick: targetHandler },
+        { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+      );
+
+      (merged.onClick as (value: unknown) => void)(argument);
+
+      expect(targetHandler).toHaveBeenCalledOnce();
+      expect(sourceHandler).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("skips the source handler when the event is already default-prevented", () => {
+    const sourceHandler = vi.fn();
+    const targetHandler = vi.fn();
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: targetHandler },
+      { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+    );
+
+    (merged.onClick as (value: unknown) => void)({ defaultPrevented: true });
+
+    expect(targetHandler).toHaveBeenCalledOnce();
+    expect(sourceHandler).not.toHaveBeenCalled();
+  });
+
+  it("gives an explicit mergeEvent precedence over eventPolicy", () => {
+    const sourceHandler = vi.fn();
+    const targetHandler = vi.fn((event: { preventDefault(): void }) => {
+      event.preventDefault();
+    });
+    const mergeEvent = vi.fn(
+      (
+        source: (...args: never[]) => unknown,
+        target: (...args: never[]) => unknown,
+      ) =>
+        (...args: never[]) => {
+          target(...args);
+          source(...args);
+        },
+    );
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: targetHandler },
+      {
+        isEventHandler,
+        eventPolicy: "skip-source-on-default-prevented",
+        mergeEvent,
+      },
+    );
+    const event = {
+      defaultPrevented: false,
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+    };
+
+    (merged.onClick as (value: typeof event) => void)(event);
+
+    expect(mergeEvent).toHaveBeenCalledOnce();
+    expect(targetHandler).toHaveBeenCalledOnce();
+    expect(sourceHandler).toHaveBeenCalledOnce();
+  });
+
+  it("preserves one-sided and non-function handlers under the opt-in policy", () => {
+    const sourceOnly = vi.fn();
+    const targetOnly = vi.fn();
+    const sourceOnlyResult = mergeCompositionProps(
+      { onClick: sourceOnly },
+      {},
+      { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+    );
+    const targetOnlyResult = mergeCompositionProps(
+      {},
+      { onClick: targetOnly },
+      { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+    );
+    const nonFunctionResult = mergeCompositionProps(
+      { onClick: sourceOnly },
+      { onClick: "not-a-handler" },
+      { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+    );
+
+    expect(sourceOnlyResult.onClick).toBe(sourceOnly);
+    expect(targetOnlyResult.onClick).toBe(targetOnly);
+    expect(nonFunctionResult.onClick).toBe("not-a-handler");
+    expect(sourceOnly).not.toHaveBeenCalled();
+    expect(targetOnly).not.toHaveBeenCalled();
+  });
+
+  it("does not run the source handler when the target handler throws", () => {
+    const sourceHandler = vi.fn();
+    const targetHandler = vi.fn(() => {
+      throw new Error("target failed");
+    });
+    const merged = mergeCompositionProps(
+      { onClick: sourceHandler },
+      { onClick: targetHandler },
+      { isEventHandler, eventPolicy: "skip-source-on-default-prevented" },
+    );
+
+    expect(() => (merged.onClick as () => void)()).toThrow("target failed");
+    expect(sourceHandler).not.toHaveBeenCalled();
+  });
+
   it("applies custom event policies to handlers in union-shaped prop types", () => {
     type SourceProps =
       | { kind: "activate"; onActivate: (value: string) => void }
@@ -183,7 +333,12 @@ describe("mergeCompositionProps", () => {
       { onClick: targetHandler },
       { isEventHandler },
     );
-    const event = { preventDefault: vi.fn() };
+    const event = {
+      defaultPrevented: false,
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+    };
 
     (merged.onClick as (value: typeof event) => void)(event);
 

@@ -30,6 +30,10 @@ export type MergeEventPolicy = (
   targetHandler: EventHandlerValue,
 ) => unknown;
 
+/** Built-in event composition behavior when no custom `mergeEvent` is supplied. */
+export type EventCompositionPolicy =
+  "chain" | "skip-source-on-default-prevented";
+
 export interface MergeCompositionPropsOptions {
   /** The adapter's convention for identifying event-handler properties. */
   isEventHandler: EventHandlerClassifier;
@@ -39,6 +43,8 @@ export interface MergeCompositionPropsOptions {
   mergeStyle?: MergeValuePolicy;
   /** Override how two distinct event-handler functions are composed. */
   mergeEvent?: MergeEventPolicy;
+  /** Select a built-in event behavior when `mergeEvent` is not supplied. */
+  eventPolicy?: EventCompositionPolicy;
 }
 
 /** A trimmed, non-empty class string, or `undefined` for anything else. */
@@ -107,12 +113,31 @@ const mergeEventHandlers: MergeEventPolicy =
     (sourceHandler as (...values: unknown[]) => unknown)(...args);
   };
 
+const mergeEventHandlersUnlessDefaultPrevented: MergeEventPolicy =
+  (sourceHandler, targetHandler) =>
+  (...args: unknown[]) => {
+    (targetHandler as (...values: unknown[]) => unknown)(...args);
+
+    const event = args[0];
+    if (
+      isObjectType(event) &&
+      "defaultPrevented" in event &&
+      Boolean(event.defaultPrevented)
+    ) {
+      return;
+    }
+
+    (sourceHandler as (...values: unknown[]) => unknown)(...args);
+  };
+
 /**
  * Merge composition contributions into a target's props.
  *
  * Ordinary target props win, including explicitly present `undefined` values.
- * Event handlers are composed target-first, then source by default. An adapter
- * may provide `mergeEvent` to supply a different framework-neutral policy.
+ * Event handlers are composed target-first, then source by default. The optional
+ * `eventPolicy` can skip the source handler when the target marks its first
+ * argument as default-prevented. An explicit `mergeEvent` takes precedence over
+ * the built-in `eventPolicy`.
  * Class values concatenate and style objects are shallow-merged, with target
  * values taking precedence.
  */
@@ -129,6 +154,11 @@ export function mergeCompositionProps(
   // whenever the target did not provide the corresponding prop.
   const mergeClass = options.mergeClass ?? mergeClassValues;
   const mergeStyle = options.mergeStyle ?? mergeStyleObjects;
+  const mergeEvent =
+    options.mergeEvent ??
+    (options.eventPolicy === "skip-source-on-default-prevented"
+      ? mergeEventHandlersUnlessDefaultPrevented
+      : mergeEventHandlers);
   const sourceOnlyPolicies: readonly [string, MergeValuePolicy][] = [
     ["class", mergeClass],
     ["className", mergeClass],
@@ -167,10 +197,7 @@ export function mergeCompositionProps(
       if (sourceValue === targetValue) {
         merged[propName] = targetValue;
       } else {
-        merged[propName] = (options.mergeEvent ?? mergeEventHandlers)(
-          sourceValue,
-          targetValue,
-        );
+        merged[propName] = mergeEvent(sourceValue, targetValue);
       }
       continue;
     }

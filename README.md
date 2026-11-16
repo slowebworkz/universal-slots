@@ -105,7 +105,9 @@ The Core API merges props contributed by a composing source with props
 owned by the target that remains responsible for rendering. Ordinary target
 values take precedence, class strings are concatenated, style objects are
 shallowly merged with target values taking precedence, and recognized event
-handlers are composed target-first then source by default.
+handlers are composed target-first then source by default. The React and
+Preact `Slot` adapters also offer an opt-in `eventPolicy` that skips the source
+handler when the target prevents default; a custom `mergeEvent` takes precedence.
 
 ```ts
 import { mergeCompositionProps } from "universal-slots/core";
