@@ -14,6 +14,9 @@ are added when a version is prepared; do not publish a version with only an
 - Add an experimental Preact 11 adapter at `universal-slots/preact`, with
   Preact-native VNode cloning, ref composition, and signal-aware class/style
   value pass-through.
+- Add the opt-in `skip-source-on-default-prevented` event composition policy
+  to Core, React, and Preact while retaining target-first/source-second chaining
+  as the default.
 
 ### Changed
 
