@@ -3,7 +3,10 @@ import process from "node:process";
 import { URL } from "node:url";
 
 const manifest = JSON.parse(
-  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  await readFile(
+    new URL("../packages/universal-slots/package.json", import.meta.url),
+    "utf8",
+  ),
 );
 const changelog = await readFile(
   new URL("../CHANGELOG.md", import.meta.url),
@@ -29,11 +32,13 @@ if (!/^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(tag)) {
 }
 if (manifest.name !== "universal-slots") {
   fail(
-    `expected the root package name to be universal-slots; got ${manifest.name}.`,
+    `expected the public package name to be universal-slots; got ${manifest.name}.`,
   );
 }
 if (tag !== `v${manifest.version}`) {
-  fail(`tag ${tag} does not match package.json version ${manifest.version}.`);
+  fail(
+    `tag ${tag} does not match packages/universal-slots/package.json version ${manifest.version}.`,
+  );
 }
 
 const heading = new RegExp(

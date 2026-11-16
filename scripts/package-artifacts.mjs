@@ -1,10 +1,11 @@
 import { readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
+const manifestPath = (rootDir) =>
+  join(rootDir, "packages/universal-slots/package.json");
+
 export async function removePackageTarballs(rootDir) {
-  const manifest = JSON.parse(
-    await readFile(join(rootDir, "package.json"), "utf8"),
-  );
+  const manifest = JSON.parse(await readFile(manifestPath(rootDir), "utf8"));
   const artifactDir = join(rootDir, "artifacts");
   const prefix = `${manifest.name}-`;
   const entries = await readdir(artifactDir).catch((error) => {
@@ -20,9 +21,7 @@ export async function removePackageTarballs(rootDir) {
 }
 
 export async function findPackageTarball(rootDir) {
-  const manifest = JSON.parse(
-    await readFile(join(rootDir, "package.json"), "utf8"),
-  );
+  const manifest = JSON.parse(await readFile(manifestPath(rootDir), "utf8"));
   const artifactDir = join(rootDir, "artifacts");
   const prefix = `${manifest.name}-`;
   const entries = await readdir(artifactDir).catch((error) => {

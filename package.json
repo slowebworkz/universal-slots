@@ -1,10 +1,11 @@
 {
-  "name": "universal-slots",
-  "version": "0.2.0",
+  "name": "universal-slots-workspace",
+  "private": true,
+  "type": "module",
   "packageManager": "pnpm@12.18.0",
   "scripts": {
-    "build": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && pnpm --filter @universal-slots/adapter-utils clean && pnpm --filter @universal-slots/adapter-utils build && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && pnpm --filter @universal-slots/preact clean && pnpm --filter @universal-slots/preact build && pnpm typecheck && node scripts/assemble-package.mjs",
-    "clean": "turbo run clean && rm -rf dist artifacts",
+    "build": "pnpm --filter @universal-slots/core clean && pnpm --filter @universal-slots/core build && pnpm --filter @universal-slots/adapter-utils clean && pnpm --filter @universal-slots/adapter-utils build && pnpm --filter @universal-slots/react clean && pnpm --filter @universal-slots/react build && pnpm --filter @universal-slots/preact clean && pnpm --filter @universal-slots/preact build && pnpm typecheck && pnpm --filter universal-slots build",
+    "clean": "turbo run clean && rm -rf packages/universal-slots/dist artifacts",
     "dev": "turbo run dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -14,7 +15,7 @@
     "typecheck": "pnpm -r typecheck",
     "prepare": "husky",
     "pack": "pnpm build && node scripts/pack-package.mjs",
-    "check:package": "publint --strict .",
+    "check:package": "publint --strict packages/universal-slots",
     "verify:package:preact-min": "pnpm run pack && VERIFY_PREACT_VERSION=11.0.0 node scripts/verify-consumer.mjs",
     "verify:package": "pnpm run pack && pnpm check:package && node scripts/verify-consumer.mjs",
     "release:check": "node scripts/validate-release.mjs"
@@ -38,70 +39,5 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"
-  },
-  "type": "module",
-  "description": "Framework-neutral composition policies with React and Preact adapters.",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/slowebworkz/universal-slots.git"
-  },
-  "sideEffects": false,
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md",
-    "docs/design/polymorphic-composition.md",
-    "docs/design/react-slot-semantics.md",
-    "docs/design/typescript-composition.md",
-    "docs/design/preact-slot-semantics.md"
-  ],
-  "exports": {
-    "./core": {
-      "types": "./dist/core/index.d.ts",
-      "import": "./dist/core/index.js"
-    },
-    "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.js"
-    },
-    "./preact": {
-      "types": "./dist/preact/index.d.ts",
-      "import": "./dist/preact/index.js"
-    }
-  },
-  "dependencies": {
-    "type-fest": "^5.10.0",
-    "remeda": "^2.59.0"
-  },
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "@types/react": "^18.0.0 || ^19.0.0",
-    "preact": "^11.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "@types/react": {
-      "optional": true
-    },
-    "preact": {
-      "optional": true
-    }
-  },
-  "homepage": "https://github.com/slowebworkz/universal-slots#readme",
-  "bugs": {
-    "url": "https://github.com/slowebworkz/universal-slots/issues"
-  },
-  "keywords": [
-    "polymorphic",
-    "component-composition",
-    "composition",
-    "slots",
-    "as-child",
-    "react",
-    "typescript",
-    "preact"
-  ]
+  }
 }

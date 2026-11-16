@@ -10,6 +10,7 @@ import {
 } from "./package-artifacts.mjs";
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url));
+const packageDir = join(rootDir, "packages/universal-slots");
 const artifactDir = join(rootDir, "artifacts");
 
 for (const entrypoint of [
@@ -20,7 +21,7 @@ for (const entrypoint of [
   "preact/index.js",
   "preact/index.d.ts",
 ]) {
-  await readFile(join(rootDir, "dist", entrypoint)).catch(() => {
+  await readFile(join(packageDir, "dist", entrypoint)).catch(() => {
     throw new Error(
       `Missing dist/${entrypoint}. Run the package build before packing.`,
     );
@@ -31,7 +32,7 @@ await mkdir(artifactDir, { recursive: true });
 await removePackageTarballs(rootDir);
 
 const result = spawnSync("pnpm", ["pack", "--pack-destination", artifactDir], {
-  cwd: rootDir,
+  cwd: packageDir,
   stdio: "inherit",
 });
 if (result.error) throw result.error;

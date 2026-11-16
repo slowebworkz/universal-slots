@@ -1,0 +1,73 @@
+{
+  "name": "universal-slots",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Framework-neutral composition policies with React and Preact adapters.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slowebworkz/universal-slots.git"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "docs/design/polymorphic-composition.md",
+    "docs/design/react-slot-semantics.md",
+    "docs/design/typescript-composition.md",
+    "docs/design/preact-slot-semantics.md"
+  ],
+  "exports": {
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    },
+    "./preact": {
+      "types": "./dist/preact/index.d.ts",
+      "import": "./dist/preact/index.js"
+    }
+  },
+  "dependencies": {
+    "type-fest": "^5.10.0",
+    "remeda": "^2.59.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "@types/react": "^18.0.0 || ^19.0.0",
+    "preact": "^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    },
+    "preact": {
+      "optional": true
+    }
+  },
+  "homepage": "https://github.com/slowebworkz/universal-slots#readme",
+  "bugs": {
+    "url": "https://github.com/slowebworkz/universal-slots/issues"
+  },
+  "keywords": [
+    "polymorphic",
+    "component-composition",
+    "composition",
+    "slots",
+    "as-child",
+    "react",
+    "typescript",
+    "preact"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/assemble-package.mjs",
+    "clean": "rm -rf dist LICENSE README.md docs"
+  }
+}

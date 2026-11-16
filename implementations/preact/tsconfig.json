@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "lib": ["ES2023", "DOM"],
+    "paths": {
+      "@universal-slots/conformance": ["../../lib/conformance/src/index.ts"],
+      "@universal-slots/adapter-utils": [
+        "../../lib/adapter-utils/src/index.ts"
+      ],
+      "@universal-slots/core": ["../../lib/core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
