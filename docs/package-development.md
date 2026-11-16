@@ -67,17 +67,19 @@ Preact consumer.
 
 This builds and packs the public package, runs strict `publint`, then installs
 the resulting tarball into isolated Core-only, React, and Preact consumers
-using exact package versions resolved in the repository lockfile. The package's
+using exact package versions resolved in the repository lockfile, with the
+React 18 compatibility consumer pinned to React 18.3.1 and matching type
+packages. The package's
 `type-fest` and `remeda` dependencies are pinned to their locked versions in
 each consumer, and the check fails if any pinned version differs. Installation
 prefers the local pnpm store but can fall back to the registry when metadata or
-packages are not cached. The Core-only consumer verifies class, style, event,
-and ordinary-prop merging without React or Preact installed. The React
-consumer renders the packaged `Slot` with `react-dom/server`. The Preact
-consumer renders its packaged `Slot` in jsdom without React installed. The React
-and Preact consumers verify class, style, and event-handler behavior. All three
-consumers compile public declaration checks. Temporary projects are removed
-after the check.
+packages are not cached. The Core-only consumer verifies class, style, event, and ordinary-prop merging
+without React or Preact installed. The React 19 consumer renders the packaged
+`Slot` with `react-dom/server`; a separate React 18 consumer verifies legacy
+element-ref extraction and ref lifecycle in jsdom. The Preact consumer renders
+its packaged `Slot` in jsdom without React installed. The React and Preact consumers verify class, style, and event-handler behavior.
+All consumers compile public declaration checks. Temporary projects are
+removed after the check.
 
 ## Public imports
 
@@ -87,8 +89,8 @@ import { Slot } from "universal-slots/react";
 import { Slot as PreactSlot } from "universal-slots/preact";
 ```
 
-The React subpath requires a compatible React 19 peer dependency and, for
-TypeScript consumers, compatible React 19 type declarations. The experimental
+The React subpath supports React 18 and React 19. TypeScript consumers should
+install matching React 18 or React 19 type declarations. The experimental
 Preact subpath targets Preact 11 and requires the `preact` peer. Core-only
 consumers do not need to install either framework.
 

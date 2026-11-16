@@ -1,6 +1,6 @@
 # React Slot Semantics
 
-Status: implemented React 19 profile; experimental and subject to conformance review
+Status: implemented React 18/19 profile; experimental and subject to conformance review
 
 This document records the settled behavior for the initial React adapter profile.
 Radix Slot is a compatibility reference, not an automatic source of requirements.
@@ -177,7 +177,7 @@ contract:
 - `className` values concatenate outer slot, inner slot, then target.
 - Style objects merge outer slot, inner slot, then target; the target wins.
 - All refs are composed and receive the same underlying instance, with cleanup
-  handled according to React 19 ref semantics.
+  handled according to the installed React major version.
 
 ### `ref`
 
@@ -187,18 +187,18 @@ contract:
 - If the same ref identity is supplied by both composition layers, invoke or
   assign it only once and clean it up only once.
 - Do not mutate or replace the original ref objects.
-- Follow the React 19 callback-ref cleanup behavior described in
-  [Supported React versions](#supported-react-versions).
+- Follow the callback-ref detach or cleanup behavior of the installed React
+  major version, as described in [Supported React versions](#supported-react-versions).
 - If only one ref exists, preserve it without unnecessary wrapping when feasible.
 - Nested slots compose all refs onto the same underlying target instance.
 
 ### Custom component targets and forwarding
 
 A custom component target must forward the props contributed by `Slot` to the
-element or component it renders. In React 19, it must also pass an injected
-`ref` through when it intends that ref to identify the underlying rendered
-instance. `Slot` cannot force a custom component to forward props or refs that
-the component consumes or discards.
+element or component it renders. In React 18, the target must use `forwardRef`
+to receive and pass through an injected ref. In React 19, it may expose `ref`
+as an ordinary prop or use `forwardRef`. `Slot` cannot force a custom component
+to forward props or refs that the component consumes or discards.
 
 For example:
 
@@ -238,17 +238,21 @@ The custom target remains responsible for forwarding the attributes and ref;
 
 ## Supported React versions
 
-**Decision: React 19 only for v1.** The package peer range is `react: ^19.0.0`.
-React 18 support is deferred until there is a concrete compatibility need.
+**Decision: React 18 and React 19 are supported by the same adapter.** The
+public peer ranges accept `^18.0.0 || ^19.0.0` for both `react` and
+`@types/react`.
 
-React 19 callback refs may return cleanup functions. The composed callback ref
-must return a cleanup function that invokes each callback ref's returned cleanup;
-for callback refs that return no cleanup, invoke them with `null` during detach.
-Object refs are cleared by setting `.current` to `null`. Cleanup must be
-idempotent and must not mutate or replace the original ref objects.
+React 18 stores the target element's ref on the element itself; React 19 exposes
+it through the element's props. The adapter selects the correct location using
+the installed React major version. React 18 detaches callback refs by invoking
+them with `null`; React 19 callback refs may instead return cleanup functions.
+The shared ref composer supports both paths: its composed callback returns a
+cleanup function on attachment, while a React 18 detach call with `null` also
+clears callback and object refs. React 19 cleanup functions are invoked exactly
+once. Object refs are cleared by setting `.current` to `null`.
 
-This decision is reflected in the React adapter package's peer dependency and
-the R-04–R-06 conformance tests.
+The adapter must not mutate or replace the original ref objects. Both React
+majors are covered by packed-consumer runtime and declaration verification.
 
 ## Deferred behavior
 

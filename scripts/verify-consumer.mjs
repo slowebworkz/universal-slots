@@ -412,6 +412,190 @@ try {
   run("node", ["runtime.mjs"], reactDir);
   typecheck(reactDir);
 
+  // React 18 uses legacy element.ref storage and requires forwardRef for Slot.
+  // Keep this consumer independent from the workspace's React 19 dev catalog.
+  const react18Pinned = {
+    ...pinned,
+    react: "18.3.1",
+    "react-dom": "18.3.1",
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.7",
+    jsdom: readLockedCatalogVersion("jsdom"),
+  };
+  const react18Dir = await createConsumer(
+    "react18",
+    {
+      react: react18Pinned.react,
+      "react-dom": react18Pinned["react-dom"],
+      "@types/react": react18Pinned["@types/react"],
+      "@types/react-dom": react18Pinned["@types/react-dom"],
+      jsdom: react18Pinned.jsdom,
+      typescript,
+    },
+    {
+      "runtime.mjs": `
+        import { JSDOM } from "jsdom";
+        import React, { createRef } from "react";
+        import { Slot } from "universal-slots/react";
+
+        const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>');
+        globalThis.window = dom.window;
+        globalThis.document = dom.window.document;
+        globalThis.HTMLElement = dom.window.HTMLElement;
+        globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+        const { act } = React;
+        const { createRoot } = await import("react-dom/client");
+
+        // React 18 warns when a callback ref returns a function, so record
+        // console errors and assert none concern callback-ref return values.
+        const consoleErrors = [];
+        const originalError = console.error;
+        console.error = (...args) => {
+          consoleErrors.push(args.map(String).join(" "));
+        };
+
+        const slotRef = createRef();
+        let childInstance = null;
+        const childRef = (instance) => { childInstance = instance; };
+        const slotCallbackCalls = [];
+        const slotCallbackRef = (instance) => { slotCallbackCalls.push(instance); };
+        const root = createRoot(document.getElementById("root"));
+        act(() => {
+          root.render(
+            React.createElement(
+              Slot,
+              { ref: slotRef, title: "from-slot" },
+              React.createElement("button", { ref: childRef }, "React 18"),
+            ),
+          );
+        });
+
+        const target = document.querySelector("button");
+        if (!target || slotRef.current !== target || childInstance !== target) {
+          throw new Error("React 18 Slot did not compose both legacy refs.");
+        }
+        if (target.getAttribute("title") !== "from-slot") {
+          throw new Error("React 18 Slot did not forward contributed props.");
+        }
+        act(() => root.unmount());
+        if (slotRef.current !== null || childInstance !== null) {
+          throw new Error("React 18 Slot did not clear refs on detach.");
+        }
+
+        // A callback ref on the Slot is attached once and detached with null.
+        const callbackRoot = createRoot(document.getElementById("root"));
+        act(() => {
+          callbackRoot.render(
+            React.createElement(
+              Slot,
+              { ref: slotCallbackRef },
+              React.createElement("button", { ref: childRef }, "React 18"),
+            ),
+          );
+        });
+        const callbackTarget = document.querySelector("button");
+        if (slotCallbackCalls.length !== 1 || slotCallbackCalls[0] !== callbackTarget) {
+          throw new Error("React 18 Slot did not attach a callback ref once.");
+        }
+        act(() => callbackRoot.unmount());
+        if (slotCallbackCalls.length !== 2 || slotCallbackCalls[1] !== null) {
+          throw new Error("React 18 Slot callback ref did not receive null on detach.");
+        }
+
+        // The composed ref handed to the target must satisfy React 18's callback
+        // contract directly: attaching returns nothing, and a later null call
+        // detaches every original ref. The target does not forward the ref to
+        // the DOM, so the test drives it by hand.
+        let composedRef = null;
+        const CaptureTarget = React.forwardRef((props, ref) => {
+          composedRef = ref;
+          return React.createElement("button", props);
+        });
+        const captureSlotRef = createRef();
+        let captureChild = null;
+        const captureRoot = createRoot(document.getElementById("root"));
+        act(() => {
+          captureRoot.render(
+            React.createElement(
+              Slot,
+              { ref: captureSlotRef },
+              React.createElement(CaptureTarget, {
+                ref: (instance) => { captureChild = instance; },
+              }),
+            ),
+          );
+        });
+        if (typeof composedRef !== "function") {
+          throw new Error("React 18 Slot did not pass a composed callback ref.");
+        }
+        const manualNode = document.createElement("div");
+        const attachResult = composedRef(manualNode);
+        if (attachResult !== undefined) {
+          throw new Error("React 18 composed ref returned a value on attach.");
+        }
+        if (captureSlotRef.current !== manualNode || captureChild !== manualNode) {
+          throw new Error("React 18 composed ref did not attach both refs.");
+        }
+        const detachResult = composedRef(null);
+        if (detachResult !== undefined) {
+          throw new Error("React 18 composed ref returned a value on detach.");
+        }
+        if (captureSlotRef.current !== null || captureChild !== null) {
+          throw new Error("React 18 composed ref did not detach both refs on null.");
+        }
+        act(() => captureRoot.unmount());
+
+        // A target-only ref must survive cloning too. React 18 stores this ref
+        // on the element rather than in target.props.
+        const targetOnlyRef = createRef();
+        // An unmounted root cannot render again, so use a fresh one.
+        const secondRoot = createRoot(document.getElementById("root"));
+        act(() => {
+          secondRoot.render(
+            React.createElement(
+              Slot,
+              null,
+              React.createElement("button", { ref: targetOnlyRef }, "Target only"),
+            ),
+          );
+        });
+        if (targetOnlyRef.current !== document.querySelector("button")) {
+          throw new Error("React 18 Slot dropped a target-only ref.");
+        }
+        act(() => secondRoot.unmount());
+        if (targetOnlyRef.current !== null) {
+          throw new Error("React 18 Slot did not clear a target-only ref.");
+        }
+        console.error = originalError;
+        const callbackRefWarnings = consoleErrors.filter((message) =>
+          message.includes("callback ref"),
+        );
+        if (callbackRefWarnings.length > 0) {
+          throw new Error(
+            "React 18 Slot emitted a callback-ref warning: " + callbackRefWarnings.join("; "),
+          );
+        }
+        dom.window.close();
+      `,
+      "consumer.ts": `
+        import { createRef } from "react";
+        import type { SlotProps } from "universal-slots/react";
+
+        const anchorRef = createRef<HTMLAnchorElement>();
+        const valid: SlotProps<"a"> = { ref: anchorRef, href: "/docs" };
+        const invalid: SlotProps<"button"> = {
+          // @ts-expect-error An anchor ref cannot be used for a button target.
+          ref: anchorRef,
+        };
+        void valid;
+        void invalid;
+      `,
+    },
+    react18Pinned,
+  );
+  run("node", ["runtime.mjs"], react18Dir);
+  typecheck(react18Dir);
+
   // Preact consumer verifies the public adapter without React installed.
   // VERIFY_PREACT_VERSION installs another Preact release, so the advertised
   // minimum (for example 11.0.0) can be checked, not only the locked version.
