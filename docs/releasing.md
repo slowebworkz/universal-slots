@@ -7,7 +7,8 @@ packages independently.
 
 ## Version policy
 
-Use Semantic Versioning for the root package:
+Use Semantic Versioning for the public `universal-slots` package, whose
+manifest is `packages/universal-slots/package.json`:
 
 - Before `1.0.0`, increment the patch for backward-compatible fixes and the
   minor version for new functionality. Breaking changes may occur in a minor
@@ -17,7 +18,7 @@ Use Semantic Versioning for the root package:
   minor releases for backward-compatible functionality, and major releases
   for breaking public API or behavior changes.
 - Keep Core and every adapter on the same version. A change to any public
-  subpath is a change to the root package.
+  subpath is a change to the public package.
 - The package is pre-1.0 and experimental. Do not bump the version, create a
   tag, or publish as part of ordinary development work; prepare and approve
   each release separately.
@@ -47,9 +48,13 @@ Maintain [`CHANGELOG.md`](../CHANGELOG.md) using Keep a Changelog sections:
 
 1. Confirm the intended changes are merged to `main` and the required CI
    checks are green.
-2. Update the root `package.json` version and `pnpm-lock.yaml` importer
-   metadata using the pinned pnpm version. Do not change internal workspace
-   versions to coordinate a release.
+2. Update the `version` in `packages/universal-slots/package.json`, the sole
+   version source. The root `package.json` is a private workspace manifest and
+   carries no version. Run `pnpm install` with the pinned pnpm version and
+   commit any `pnpm-lock.yaml` change; the importer entry for
+   `packages/universal-slots` must stay in sync, because CI installs with
+   `--frozen-lockfile`. Do not change internal workspace versions to coordinate
+   a release.
 3. Move the relevant `Unreleased` entries into the dated version section in
    `CHANGELOG.md`, then start a new empty `Unreleased` section.
 4. Commit the version and changelog changes to `main`.
@@ -67,7 +72,7 @@ The release validator can also be run locally:
 pnpm release:check -- --tag vX.Y.Z
 ```
 
-Replace `vX.Y.Z` with the exact tag matching the root package version and a
+Replace `vX.Y.Z` with the exact tag matching the public package version and a
 completed changelog entry. The release workflow performs the same validation
 before package verification and publication.
 

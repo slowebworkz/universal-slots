@@ -175,11 +175,15 @@ for the composition contract. Run `pnpm run pack` to create a local tarball.
 
 ## Workspace conventions
 
-- The intended public distribution is one root package: `universal-slots`.
-- `lib/*` is reserved for private internal workspaces; Core, React, and Preact
-  workspace packages are implementation/build boundaries.
-- `packages/*` is reserved for a future independently publishable product only
-  when there is a concrete need for one.
+- The public distribution is one package, `universal-slots`, defined in
+  `packages/universal-slots`.
+- `lib/*` holds shared private infrastructure: Core, adapter utilities, and the
+  conformance suite.
+- `implementations/*` holds the private React and Preact framework
+  implementations.
+- `packages/*` holds publishable distribution artifacts only. The single
+  package there is assembled from the built `lib/` and `implementations/`
+  outputs; it contains no duplicated source.
 - `apps/*` is intentionally omitted until an actual application is needed.
 
 Core, React, and Preact are private implementation workspaces. Their build

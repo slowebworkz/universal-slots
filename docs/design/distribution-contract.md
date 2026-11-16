@@ -10,7 +10,7 @@ manifest, and single-tarball workflow.
 ## 1. Public package identity
 
 - Publish one package named `universal-slots`.
-- The root `package.json` is the public package manifest and the source of
+- `packages/universal-slots/package.json` is the public package manifest and the source of
   truth for the published version.
 - The initial package is ESM-only (`type: module`). CommonJS support is not
   part of the initial contract.
@@ -25,7 +25,7 @@ manifest, and single-tarball workflow.
   `@universal-slots/preact` as separate packages. Their package names remain
   internal workspace identifiers only.
 
-The root package is the only release and versioning unit. Core and adapter
+The `universal-slots` package is the only release and versioning unit. Core and adapter
 workspace versions must not drive the public package version or require
 coordinated releases.
 
@@ -78,24 +78,29 @@ The target workspace locations are:
 
 ```text
 lib/
-├── core/
+├── adapter-utils/
+├── conformance/
+└── core/
+implementations/
 ├── react/
 └── preact/
 ```
 
 - `lib/core` owns framework-neutral composition policies and public Core
   source.
-- `lib/react` owns React-specific element, event, and ref behavior.
-- `lib/preact` owns Preact-specific VNode, event, and ref behavior.
-- All three are private internal workspaces. Their package manifests may retain
+- `implementations/react` owns React-specific element, event, and ref behavior.
+- `implementations/preact` owns Preact-specific VNode, event, and ref behavior.
+- All of these are private internal workspaces. Their package manifests may retain
   internal workspace names for dependency resolution, but they are not
   published.
-- `packages/` remains reserved for a future genuinely independent package
-  only if a concrete need arises.
+- `packages/universal-slots` is the single publishable package. `packages/`
+  holds distribution artifacts only; it duplicates no implementation source and
+  assembles the built outputs of `lib/` and `implementations/`.
 - Internal workspace dependencies and source aliases are development
   mechanisms. They must not leak into the public manifest or packed output.
 
-The internal workspaces now live at `lib/core`, `lib/react`, and `lib/preact`.
+The internal workspaces now live at `lib/core`, `implementations/react`, and
+`implementations/preact`.
 Their manifests remain private workspace manifests and are not included in the
 public tarball.
 
@@ -133,7 +138,7 @@ part of the published runtime.
 
 ## 5. Public manifest dependencies
 
-The root public manifest owns the union of dependencies required by the
+The public package manifest owns the union of dependencies required by the
 public subpaths.
 
 | Section            | Dependency     | Range     | Reason                                                   |
@@ -180,7 +185,8 @@ stable external repository URLs once those are established).
 
 ## 7. Versioning and packaging
 
-- The root `package.json` version is the only published version.
+- The `packages/universal-slots/package.json` version is the only published
+  version.
 - One root build assembles Core, React, and Preact in dependency order.
 - One root pack command produces one `universal-slots-<version>.tgz` artifact
   in the ignored `artifacts/` directory.
@@ -193,7 +199,7 @@ stable external repository URLs once those are established).
 The implementation and verification of assembly, packing, strict package
 validation, and clean external-consumer installation belong to
 US-009b.6.2 and US-009b.6.3. Publication automation and release policy beyond
-the single root version are addressed in US-009b.6.4.
+the single public version are addressed in US-009b.6.4.
 
 ## 8. Acceptance checks for this contract
 
@@ -203,24 +209,25 @@ Before implementation proceeds, the following decisions must remain true:
 - Core, React, and Preact are selected through their explicit public subpaths.
 - No public root export or independent `@universal-slots/*` package is
   introduced.
-- Internal workspaces live under `lib/` and remain private.
-- The root version is the only public version.
+- Internal workspaces live under `lib/` and `implementations/` and remain
+  private.
+- The public package version is the only version.
 - The packed package contains the documented subpath outputs and their
   declared dependencies, with no workspace-only references.
 
 ## 9. Release and publication policy
 
-The root `package.json` is the sole version source for the public package.
+`packages/universal-slots/package.json` is the sole version source for the public package.
 Core and all framework adapters ship together. The initial public release was
 intended to be `0.1.0`; the Core and React adapter were experimental at that
 release. The Preact adapter is an experimental addition for a subsequent
 package version. Stable release tags use
-`vMAJOR.MINOR.PATCH` and must match the root package version and a dated
+`vMAJOR.MINOR.PATCH` and must match the public package version and a dated
 `CHANGELOG.md` entry.
 
 The release workflow first validates and verifies a pushed version tag without
 publishing. A separate manual workflow dispatch against that tag, with its
-`publish` input explicitly enabled, publishes the exact verified root tarball
+`publish` input explicitly enabled, publishes the exact verified tarball
 using npm trusted publishing and provenance, then creates the GitHub Release
 from the matching changelog section. See [the release process](../releasing.md)
 for versioning, changelog, permissions, and recovery procedures.

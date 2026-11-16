@@ -8,9 +8,11 @@
     // build. This mapping is workspace-only; core's published export map points
     // strictly at `dist`.
     "paths": {
-      "@universal-slots/conformance": ["../conformance/src/index.ts"],
-      "@universal-slots/adapter-utils": ["../adapter-utils/src/index.ts"],
-      "@universal-slots/core": ["../core/src/index.ts"]
+      "@universal-slots/conformance": ["../../lib/conformance/src/index.ts"],
+      "@universal-slots/adapter-utils": [
+        "../../lib/adapter-utils/src/index.ts"
+      ],
+      "@universal-slots/core": ["../../lib/core/src/index.ts"]
     }
   },
   "include": ["src"]

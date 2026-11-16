@@ -1,14 +1,23 @@
-import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  cp,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url));
-const distDir = join(rootDir, "dist");
+const packageDir = join(rootDir, "packages/universal-slots");
+const distDir = join(packageDir, "dist");
 const workspaces = [
   { name: "core", source: join(rootDir, "lib/core/dist") },
   { name: "adapter-utils", source: join(rootDir, "lib/adapter-utils/dist") },
-  { name: "react", source: join(rootDir, "lib/react/dist") },
-  { name: "preact", source: join(rootDir, "lib/preact/dist") },
+  { name: "react", source: join(rootDir, "implementations/react/dist") },
+  { name: "preact", source: join(rootDir, "implementations/preact/dist") },
 ];
 
 async function listFiles(directory) {
@@ -68,6 +77,18 @@ for (const workspace of ["adapter-utils", "react", "preact"]) {
   }
 }
 
+// `pnpm pack` only includes files inside the package directory, so stage the
+// repository-level files listed in the package manifest's `files` field.
+const manifest = JSON.parse(
+  await readFile(join(packageDir, "package.json"), "utf8"),
+);
+for (const file of manifest.files) {
+  if (file === "dist") continue;
+  const target = join(packageDir, file);
+  await mkdir(dirname(target), { recursive: true });
+  await copyFile(join(rootDir, file), target);
+}
+
 const emittedFiles = await listFiles(distDir);
 for (const path of emittedFiles) {
   if (!/\.(?:js|mjs|cjs|d\.ts)$/.test(path)) continue;
@@ -84,5 +105,5 @@ for (const path of emittedFiles) {
 }
 
 console.log(
-  "\nAssembled public package outputs in dist/core, dist/react, dist/preact, and private dist/adapter-utils.",
+  "\nAssembled public package outputs in packages/universal-slots/dist (core, react, preact, and private adapter-utils).",
 );

@@ -3,7 +3,7 @@
 The public distribution is one `universal-slots` package with three explicit
 subpath exports: `universal-slots/core`, `universal-slots/react`, and
 `universal-slots/preact`. Core and the framework adapters remain private
-implementation workspaces under `lib/`; none is an independent release
+implementation workspaces under `lib/` and `implementations/`; none is an independent release
 candidate. See the
 [single-package distribution contract](./distribution-contract.md).
 
@@ -11,11 +11,11 @@ candidate. See the
 
 - `lib/core` owns framework-neutral composition policies and public Core
   source.
-- `lib/react` owns React-specific element, event, and ref behavior.
-- `lib/preact` owns Preact-specific VNode, event, and ref behavior.
+- `implementations/react` owns React-specific element, event, and ref behavior.
+- `implementations/preact` owns Preact-specific VNode, event, and ref behavior.
 - React and Preact depend on Core through the private
   `@universal-slots/core` workspace package during development and build.
-- The root package owns the union of public runtime dependencies and optional
+- The `packages/universal-slots` package owns the union of public runtime dependencies and optional
   React and Preact peer dependencies.
 
 Core's runtime and type source has no React, Preact, or Praxis-kit imports.
@@ -31,14 +31,14 @@ adapter's `@universal-slots/core` specifier to the public self-reference
 `universal-slots/core` in both JavaScript and declaration files. It rejects
 unresolved workspace protocol references in the assembled output.
 
-The root export map points only to the generated JavaScript and declaration
-entrypoints. The root manifest declares the concrete union of runtime
+The package export map points only to the generated JavaScript and declaration
+entrypoints. The package manifest declares the concrete union of runtime
 dependencies (`type-fest` and `remeda`) and optional React and Preact peers.
 Internal workspace manifests are private and are not included in the public package.
 
 ## Package contents
 
-`pnpm run pack` creates one `universal-slots-<version>.tgz` artifact. The root
+`pnpm run pack` creates one `universal-slots-<version>.tgz` artifact. The package
 manifest's `files` allowlist includes only `dist`, `LICENSE`, `README.md`, and
 the three public design documents. The pack script inspects the resulting
 tarball and fails if required entrypoints are missing or unexpected files are

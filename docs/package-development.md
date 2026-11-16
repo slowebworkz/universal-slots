@@ -15,18 +15,24 @@ pnpm build
 
 The build cleans and builds the internal Core workspace first, then builds the
 React and Preact adapters against Core's distributable declarations. It
-assembles all three outputs under `dist/`:
+assembles them under `packages/universal-slots/dist/`:
 
 ```text
-dist/
-├── core/
-├── react/
-└── preact/
+packages/universal-slots/dist/
+├── core/           public: universal-slots/core
+├── react/          public: universal-slots/react
+├── preact/         public: universal-slots/preact
+└── adapter-utils/  private implementation detail
 ```
+
+`core`, `react`, and `preact` are the three public entrypoints. `adapter-utils`
+is a fourth, private directory: the React and Preact builds import it by
+relative path, so it must ship, but it has no export-map entry and is not a
+supported API. Do not import it from consumer code.
 
 The assembly step rewrites each adapter's internal `@universal-slots/core`
 import to the public self-reference `universal-slots/core` in JavaScript and
-declaration files. The root package export map exposes `./core`, `./react`,
+declaration files. The package export map exposes `./core`, `./react`,
 and `./preact`.
 
 ## Create one local package tarball
@@ -43,8 +49,8 @@ artifacts/universal-slots-<version>.tgz
 ```
 
 The pack step checks that all three public entrypoints and their declarations
-are present and that the tarball contains only the root manifest, license, README,
-allowlisted design documentation, and assembled `dist/` output. Re-running
+are present and that the tarball contains only the package manifest, license, README,
+allowlisted design documentation, and the assembled `dist/` output. Re-running
 `pnpm run pack` replaces the previous `universal-slots-*.tgz` artifact.
 
 ## Validate the package manifest
@@ -53,7 +59,7 @@ allowlisted design documentation, and assembled `dist/` output. Re-running
 pnpm check:package
 ```
 
-This runs strict `publint` against the root package.
+This runs strict `publint` against `packages/universal-slots`.
 
 ## Verify the packed package
 
@@ -98,5 +104,5 @@ consumers do not need to install either framework.
 
 See [the release process](./releasing.md) for the single-package versioning,
 changelog, dry-run, npm trusted-publishing, and GitHub Release procedures.
-The root package version is authoritative; do not version or publish the
+The version in `packages/universal-slots/package.json` is authoritative; do not version or publish the
 private Core and adapter workspaces independently.
